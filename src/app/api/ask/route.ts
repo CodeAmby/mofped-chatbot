@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 			...response,
 			timings: { total_ms: Date.now() - started },
 		});
-	} catch (e) {
+	} catch {
 		return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 	}
 }

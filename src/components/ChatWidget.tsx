@@ -27,7 +27,7 @@ interface ChatWidgetProps {
 
 export default function ChatWidget({
 	apiUrl = "/api/ask",
-	theme = 'light',
+	// theme = 'light',
 	position = 'bottom-right',
 	primaryColor = "#103B73",
 	secondaryColor = "#2E7D32"
