@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Check, Copy, ExternalLink, Send, Sparkles, User, X } from "lucide-react";
+import { Bot, Check, Copy, ExternalLink, Send, Sparkles, User, X, Minus } from "lucide-react";
 
 type Sender = "user" | "bot";
 
@@ -13,6 +13,7 @@ interface Message {
 	sources?: Array<{ url: string; title: string; section?: string; relevance: number }>;
 	confidence?: number;
 	notFound?: boolean;
+	options?: Array<{ text: string; action: string; query: string }>;
 }
 
 export default function Home() {
@@ -21,7 +22,7 @@ export default function Home() {
 	]);
 	const [inputValue, setInputValue] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
-	const [isOpen, setIsOpen] = useState(true);
+	const [isOpen, setIsOpen] = useState(false);
 	const [copiedSource, setCopiedSource] = useState<string | null>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -29,34 +30,47 @@ export default function Home() {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages, isOpen]);
 
-	const handleSendMessage = async () => {
-		if (!inputValue.trim() || isLoading) return;
+	const handleSendMessage = async (messageText?: string) => {
+		const textToSend = messageText || inputValue;
+		if (!textToSend.trim() || isLoading) return;
+
+		// Check if this is an external link
+		if (textToSend.startsWith('http')) {
+			window.open(textToSend, '_blank');
+			return;
+		}
 
 		const userMessage: Message = {
 			id: Date.now().toString(),
-			text: inputValue,
+			text: textToSend,
 			sender: "user",
 			timestamp: new Date(),
 		};
 		setMessages((prev) => [...prev, userMessage]);
-		setInputValue("");
+		if (!messageText) setInputValue("");
 		setIsLoading(true);
 
 		try {
-			const res = await fetch("/api/chat", {
+			const res = await fetch("/api/ask", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ message: userMessage.text }),
+				body: JSON.stringify({ query: textToSend }),
 			});
 			const data = await res.json();
 			const botMessage: Message = {
 				id: (Date.now() + 1).toString(),
-				text: data.response ?? "Sorry, something went wrong.",
+				text: data.summary ?? "Sorry, something went wrong.",
 				sender: "bot",
 				timestamp: new Date(),
-				sources: data.sources ?? [],
-				confidence: data.confidence,
-				notFound: data.notFound,
+				sources: data.sources?.map((s: any) => ({
+					url: s.url,
+					title: s.title,
+					section: s.category,
+					relevance: 0.8
+				})) ?? [],
+				confidence: data.guardrail_status === "ok" ? 0.9 : 0.3,
+				notFound: data.guardrail_status === "not_found",
+				options: data.options ?? [],
 			};
 			setMessages((prev) => [...prev, botMessage]);
 		} catch (e) {
@@ -109,16 +123,15 @@ export default function Home() {
 				<div className="fixed bottom-4 right-4 z-50 w-[380px] h-[560px] bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col">
 					<div className="flex items-center justify-between px-4 py-3 rounded-t-2xl bg-[#103B73] text-white">
 						<div className="flex items-center gap-2">
-							<div className="p-2 bg-[#F2B01E] rounded-lg">
-								<Sparkles className="w-4 h-4 text-white" />
+							<div className="p-2 bg-white rounded-lg">
+								<img src="/mofped-seal.svg" alt="MoFPED Seal" className="w-4 h-4" />
 							</div>
 							<div>
 								<h1 className="text-sm font-semibold leading-none">AI Assistant</h1>
-								<p className="text-[11px] opacity-80">Widget appears bottom-right on finance.go.ug</p>
 							</div>
 						</div>
-						<button aria-label="Close" onClick={() => setIsOpen(false)} className="p-1 rounded hover:bg-white/10">
-							<X className="w-4 h-4" />
+						<button aria-label="Minimize" onClick={() => setIsOpen(false)} className="p-1 rounded hover:bg-white/10">
+							<Minus className="w-4 h-4" />
 						</button>
 					</div>
 
@@ -133,6 +146,23 @@ export default function Home() {
 
 								<div className={`max-w-[80%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${message.sender === "user" ? "text-white" : "text-[#0B1F3B] border border-gray-200"}`} style={{ backgroundColor: message.sender === "user" ? "#2E7D32" : "#ffffff" }}>
 									<p>{message.text}</p>
+
+									{message.sender === "bot" && message.options && message.options.length > 0 && (
+										<div className="mt-3 pt-2 border-t border-gray-200">
+											<p className="text-[11px] text-gray-600 mb-2">What would you like to do?</p>
+											<div className="space-y-1.5">
+												{message.options.map((option, index) => (
+													<button
+														key={index}
+														onClick={() => handleSendMessage(option.query)}
+														className="w-full text-left bg-blue-50 hover:bg-blue-100 rounded-lg p-2 border border-blue-200 transition-colors"
+													>
+														<p className="text-[11px] font-medium" style={{ color: "#103B73" }}>{option.text}</p>
+													</button>
+												))}
+											</div>
+										</div>
+									)}
 
 									{message.sender === "bot" && message.sources && message.sources.length > 0 && (
 										<div className="mt-3 pt-2 border-t border-gray-200">
