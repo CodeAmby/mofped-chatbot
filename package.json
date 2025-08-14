@@ -8,16 +8,22 @@
     "start": "next start",
     "lint": "next lint",
     "ingest": "tsx scripts/ingest.ts",
+    "ingest:supabase": "tsx scripts/ingest-supabase.ts",
+    "test-doc": "tsx scripts/test-doc.ts",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "smoke": "node scripts/doc-smoke.mjs"
   },
   "dependencies": {
     "@langchain/community": "^0.3.50",
+    "@langchain/core": "^0.3.30",
     "@langchain/openai": "^0.6.7",
     "@pinecone-database/pinecone": "^6.1.2",
     "@prisma/client": "^6.14.0",
+    "@supabase/supabase-js": "^2.55.0",
     "@types/pg": "^8.15.5",
     "cheerio": "^1.1.2",
+    "dotenv": "^17.2.1",
     "langchain": "^0.3.30",
     "lucide-react": "0.468.0",
     "next": "15.4.6",
@@ -28,8 +34,7 @@
     "puppeteer": "^24.16.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "tesseract.js": "^6.0.1",
-    "lucide-react": "0.468.0"
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -40,7 +45,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "typescript": "^5"
   }
 }

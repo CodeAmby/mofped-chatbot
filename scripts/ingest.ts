@@ -1,13 +1,17 @@
 import * as cheerio from "cheerio";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../src/lib/prisma";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import crypto from "crypto";
+import dotenv from "dotenv";
+
+dotenv.config();
+dotenv.config({ path: ".env.local" });
 
 const START_URLS = ["https://finance.go.ug/"];
 const ALLOWED_HOSTS = new Set(["finance.go.ug", "budget.finance.go.ug"]);
 
 async function fetchHtml(url: string): Promise<string> {
-	const res = await fetch(url, { headers: { "user-agent": "MoFPED-Chatbot/1.0" } });
+    const res = await fetch(url, { headers: { "user-agent": "MoFPED-Chatbot/1.0", "accept": "text/html,*/*;q=0.1" } });
 	if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
 	return res.text();
 }
@@ -19,29 +23,35 @@ function extractLinksAndText(baseUrl: string, html: string) {
 	const text = $("main, article, .content, #content").text() || $("body").text();
 	const cleaned = text.replace(/\s+/g, " ").trim();
 	const links: string[] = [];
-	$("a[href]").each((_, el) => {
+    const disallowExt = [
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".ico",
+        ".mp4", ".mp3", ".avi", ".mov",
+        ".zip", ".tar", ".gz", ".7z",
+    ];
+    $("a[href]").each((_, el) => {
 		const href = $(el).attr("href");
 		if (!href || href.startsWith("#") || href.startsWith("javascript:")) return;
 		try {
 			const abs = new URL(href, baseUrl).href;
 			const host = new URL(abs).hostname;
-			if (ALLOWED_HOSTS.has(host)) links.push(abs);
+            const lower = abs.toLowerCase();
+            if (disallowExt.some((ext) => lower.endsWith(ext))) return;
+            if (ALLOWED_HOSTS.has(host)) links.push(abs);
 		} catch {}
 	});
 	return { title, text: cleaned, links };
 }
 
 function chunk(text: string, chunkSize = 1000, overlap = 150) {
-	const chunks: string[] = [];
-	let i = 0;
-	while (i < text.length) {
-		const end = Math.min(i + chunkSize, text.length);
-		chunks.push(text.slice(i, end));
-		i = end - overlap;
-		if (i < 0) i = 0;
-		if (i >= text.length) break;
-	}
-	return chunks;
+    const chunks: string[] = [];
+    if (!text || text.length === 0) return chunks;
+    const step = Math.max(1, chunkSize - Math.max(0, Math.min(overlap, chunkSize - 1)));
+    for (let start = 0; start < text.length; start += step) {
+        const end = Math.min(start + chunkSize, text.length);
+        chunks.push(text.slice(start, end));
+        if (end === text.length) break;
+    }
+    return chunks;
 }
 
 async function embedAll(texts: string[]) {
@@ -58,6 +68,7 @@ async function upsertDocument(url: string, title: string | null, fullText: strin
 	const contentHash = hashContent(fullText);
 	const existing = await prisma.document.findUnique({ where: { url } });
 	if (existing && existing.hash === contentHash) {
+		console.log(`[skip] Unchanged: ${url}`);
 		return existing.id;
 	}
 	const doc = await prisma.document.upsert({
@@ -67,15 +78,19 @@ async function upsertDocument(url: string, title: string | null, fullText: strin
 	});
 	if (existing) await prisma.documentChunk.deleteMany({ where: { documentId: doc.id } });
 	const parts = chunk(fullText);
-	const vecs = await embedAll(parts);
-	for (let i = 0; i < parts.length; i++) {
-		await prisma.$executeRawUnsafe(
-			`INSERT INTO "DocumentChunk" (id, "documentId", content, embedding, "chunkIndex") VALUES (gen_random_uuid(), $1, $2, $3::vector, $4)`,
-			doc.id,
-			parts[i],
-			vecs[i] as any,
-			i,
-		);
+	console.log(`[chunks] ${url} → ${parts.length}`);
+	try {
+		const vecs = await embedAll(parts);
+		for (let i = 0; i < parts.length; i++) {
+			const id = crypto.randomUUID();
+			const vec = vecs[i] as number[];
+			const vecLiteral = `'[${vec.join(",")}]'::vector`;
+			const sql = `INSERT INTO "DocumentChunk" (id, "documentId", content, embedding, "chunkIndex") VALUES ('${id}', '${doc.id}', $${1}, ${vecLiteral}, ${i})`;
+			await prisma.$executeRawUnsafe(sql, parts[i]);
+		}
+		console.log(`[ok] Inserted ${parts.length} chunks for ${url}`);
+	} catch (e) {
+		console.error(`[embed-fail] ${url}`, e);
 	}
 	return doc.id;
 }
@@ -88,6 +103,7 @@ export async function runIngest() {
 		if (seen.has(url)) continue;
 		seen.add(url);
 		try {
+			console.log(`[fetch] ${url}`);
 			const html = await fetchHtml(url);
 			const { title, text, links } = extractLinksAndText(url, html);
 			if (text && text.length > 300) {
@@ -96,7 +112,7 @@ export async function runIngest() {
 			for (const l of links) if (!seen.has(l) && queue.length < 200) queue.push(l);
 			await new Promise((r) => setTimeout(r, 600));
 		} catch (e) {
-			// continue
+			console.error(`[error] ${url}`, e);
 		}
 	}
 }

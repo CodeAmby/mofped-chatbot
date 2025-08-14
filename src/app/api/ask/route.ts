@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchHybrid, selectTopWithThreshold } from "@/lib/rag";
+import { searchHybrid, selectTopWithThreshold } from "@/lib/rag-supabase";
 
 export async function POST(req: NextRequest) {
 	const started = Date.now();
@@ -9,8 +9,11 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: "Query is required" }, { status: 400 });
 		}
 
+		console.log(`[API] Processing query: "${query}"`);
 		const results = await searchHybrid(query, 20);
+		console.log(`[API] Search returned ${results.length} results`);
 		const top = selectTopWithThreshold(results, 5);
+		console.log(`[API] After filtering: ${top.length} results`);
 
 		if (top.length === 0) {
 			return NextResponse.json({
