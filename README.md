@@ -5,11 +5,11 @@ A modern Retrieval-Augmented Generation (RAG) chatbot for the Ministry of Financ
 ## Features
 
 - **Modern Chat Interface**: Responsive, MoFPED-branded chatbot widget
-- **RAG Pipeline**: Advanced document retrieval and answer generation
-- **Supabase Integration**: Vector search with pgvector for similarity matching
-- **Content Ingestion**: Automated web crawling and document processing
-- **Source Citations**: Verbatim citations with links to source pages
-- **Zero Hallucination**: Strict source gating to prevent false information
+- **Document Discovery**: Intelligent search and categorization of MoFPED documents
+- **Supabase Integration**: Vector search with pgvector for semantic matching
+- **Metadata-Based Search**: Focus on document titles, descriptions, and categories
+- **Source Linking**: Direct links to authoritative source documents
+- **Zero Hallucination**: No content generation, only document discovery and linking
 
 ## Tech Stack
 
@@ -66,8 +66,8 @@ A modern Retrieval-Augmented Generation (RAG) chatbot for the Ministry of Financ
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
 - `npm run smoke` - Test Supabase connection
-- `npm run ingest:supabase` - Crawl and ingest content from finance.go.ug
-- `npm run test-doc` - Add test document to database
+- `npm run populate-sample` - Add sample MoFPED documents to database
+- `npm run check-db` - Check database state and document counts
 
 ## Project Structure
 
@@ -100,29 +100,29 @@ mofped-chatbot/
 
 The project uses a PostgreSQL database with the following key tables:
 
-- **Document**: Core documents from finance.go.ug
-- **DocumentChunk**: Chunked content with vector embeddings
+- **Document**: Document metadata (title, URL, description, category)
+- **DocumentExcerpt**: Key excerpts with vector embeddings for semantic search
 - **ChatSession**: Chat session tracking
-- **ChatMessage**: Individual chat messages
+- **ChatMessage**: Individual chat messages with document references
 
 ## Current Status
 
 ✅ **Completed:**
 - Modern chatbot UI with MoFPED branding
 - Supabase integration and connection testing
-- RAG API endpoint with basic functionality
-- Database schema and migrations
-- Content ingestion framework
+- Simplified document discovery API
+- Database schema optimized for metadata search
+- Sample data population framework
 
 🔄 **In Progress:**
-- Content population (79 documents found, 0 chunks)
-- Vector search optimization
-- Advanced RAG features
+- Sample document population and testing
+- Semantic search optimization
+- Document categorization
 
 ⏳ **Next Steps:**
-- Populate database with chunked content
-- Implement hybrid search (vector + BM25)
-- Add PDF processing and OCR
+- Populate with real MoFPED documents
+- Implement advanced filtering by category/date
+- Add document analytics and usage tracking
 - Create embeddable widget
 - Deploy to production
 
