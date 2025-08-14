@@ -14,7 +14,8 @@ const securityHeaders = {
 };
 
 // Input validation - commented out for now
-// function validateInput(input: string): boolean {
+/*
+function validateInput(input: string): boolean {
   // Check for SQL injection patterns
   const sqlPatterns = [
     /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/i,
@@ -40,6 +41,7 @@ const securityHeaders = {
   
   return !allPatterns.some(pattern => pattern.test(input));
 }
+*/
 
 // Rate limiting
 function checkRateLimit(ip: string): boolean {
