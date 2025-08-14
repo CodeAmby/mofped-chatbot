@@ -6,10 +6,78 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// Core documents ingested from finance.go.ug and whitelisted subdomains
+model Document {
+  id            String          @id @default(cuid())
+  url           String          @unique
+  title         String?
+  contentType   String
+  source        String          // hostname
+  section       String?
+  publishDate   DateTime?
+  lastModified  DateTime?
+  hash          String          // content hash to detect changes
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  chunks        DocumentChunk[]
+
+  @@index([source])
+  @@index([hash])
+}
+
+// Chunked content with pgvector embedding for retrieval
+model DocumentChunk {
+  id          String   @id @default(cuid())
+  documentId  String
+  content     String
+  embedding   Unsupported("vector(1536)")?
+  chunkIndex  Int
+  pageNumber  Int?
+  createdAt   DateTime @default(now())
+
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([chunkIndex])
+}
+
+// Minimal chat logging for analytics
+model ChatSession {
+  id         String        @id @default(cuid())
+  sessionId  String        @unique
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  messages   ChatMessage[]
+
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id         String      @id @default(cuid())
+  sessionId  String
+  role       MessageRole
+  content    String
+  response   String?
+  latencyMs  Int?
+  createdAt  DateTime    @default(now())
+
+  session    ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }
