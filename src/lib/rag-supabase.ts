@@ -62,7 +62,7 @@ export async function searchHybrid(query: string, limit = 20): Promise<Retrieved
 
 		console.log(`[search] Found ${chunks?.length || 0} chunks`);
 
-		return chunks?.map((chunk: any) => ({
+		return chunks?.map((chunk: { id: string; content: string; chunkIndex: number }) => ({
 			chunkId: chunk.id,
 			documentId: doc.id,
 			content: chunk.content,

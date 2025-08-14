@@ -19,7 +19,7 @@ export async function embedQuery(text: string): Promise<number[]> {
 export async function searchHybrid(query: string, limit = 20): Promise<RetrievedChunk[]> {
 	const qVec = await embedQuery(query);
 	// Vector search only (pgvector). BM25 can be added later via tsvector/ts_rank.
-	const rows = await prisma.$queryRawUnsafe<any[]>(
+	const rows = await prisma.$queryRawUnsafe<Array<{ chunkId: string; documentId: string; content: string; url: string; title: string; section: string; score: number }>>(
 		`SELECT dc.id as "chunkId", dc."documentId", dc.content, d.url, d.title, d.section,
 		 dc.embedding <=> $1::vector as score
 		 FROM "DocumentChunk" dc
@@ -27,7 +27,7 @@ export async function searchHybrid(query: string, limit = 20): Promise<Retrieved
 		 WHERE d."isActive" = true
 		 ORDER BY score ASC
 		 LIMIT ${limit}`,
-		qVec as any,
+		qVec as number[],
 	);
 	return rows as RetrievedChunk[];
 }

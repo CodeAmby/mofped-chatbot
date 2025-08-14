@@ -13,8 +13,8 @@ const securityHeaders = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 };
 
-// Input validation
-function validateInput(input: string): boolean {
+// Input validation - commented out for now
+// function validateInput(input: string): boolean {
   // Check for SQL injection patterns
   const sqlPatterns = [
     /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/i,
@@ -122,7 +122,7 @@ export function middleware(request: NextRequest) {
         // to read the body without consuming it
         // For now, we'll validate in the route handler
       }
-    } catch (error) {
+                  } catch {
       return new NextResponse(
         JSON.stringify({ error: 'Invalid request body' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }

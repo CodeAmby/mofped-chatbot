@@ -164,7 +164,7 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
   const isEGPQuery = queryLower.includes('egp') || queryLower.includes('procurement');
   const isBudgetQuery = queryLower.includes('budget');
   const isURAQuery = queryLower.includes('ura') || queryLower.includes('revenue') || queryLower.includes('tax');
-  const isBOUQuery = queryLower.includes('bou') || queryLower.includes('bank of uganda') || queryLower.includes('central bank');
+  	// const isBOUQuery = queryLower.includes('bou') || queryLower.includes('bank of uganda') || queryLower.includes('central bank');
   const isPBSQuery = queryLower.includes('pbs') || queryLower.includes('programme based system') || queryLower.includes('programme based');
   const isCFPQuery = queryLower.includes('cfp') || queryLower.includes('climate finance') || queryLower.includes('climate');
 
@@ -355,7 +355,7 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
   const topDocs = documents.slice(0, 3);
   if (topDocs.length > 0) {
     summary += '\n\nKey documents include:';
-    topDocs.forEach((doc, i) => {
+    topDocs.forEach((doc) => {
       summary += `\n• ${doc.title}`;
       if (doc.description) {
         summary += ` - ${doc.description.substring(0, 100)}...`;

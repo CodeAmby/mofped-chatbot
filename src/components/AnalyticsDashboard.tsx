@@ -10,7 +10,7 @@ interface AnalyticsData {
   optionClicks: Array<{ option: string; count: number }>;
   externalLinkClicks: Array<{ link: string; count: number }>;
   documentsFound: Array<{ count: number; frequency: number }>;
-  sessionData: Array<any>;
+  sessionData: Array<{ query: string; responseTime: number; documentsFound: number; timestamp: string; sessionId: string }>;
 }
 
 export default function AnalyticsDashboard() {

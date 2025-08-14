@@ -1,4 +1,4 @@
-import { Analytics } from '@vercel/analytics/react';
+
 
 export interface ChatAnalytics {
   query: string;

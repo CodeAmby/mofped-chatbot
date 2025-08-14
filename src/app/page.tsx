@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Check, Copy, ExternalLink, Send, Sparkles, User, X, Minus } from "lucide-react";
+import { Bot, Check, Copy, ExternalLink, Send, User, Minus } from "lucide-react";
 
 type Sender = "user" | "bot";
 
@@ -62,7 +62,7 @@ export default function Home() {
 				text: data.summary ?? "Sorry, something went wrong.",
 				sender: "bot",
 				timestamp: new Date(),
-				sources: data.sources?.map((s: any) => ({
+				sources: data.sources?.map((s: { url: string; title: string; category?: string }) => ({
 					url: s.url,
 					title: s.title,
 					section: s.category,
@@ -73,7 +73,7 @@ export default function Home() {
 				options: data.options ?? [],
 			};
 			setMessages((prev) => [...prev, botMessage]);
-		} catch (e) {
+		} catch {
 			setMessages((prev) => [
 				...prev,
 				{ id: (Date.now() + 1).toString(), text: "Sorry, I hit an error. Please try again.", sender: "bot", timestamp: new Date() },
