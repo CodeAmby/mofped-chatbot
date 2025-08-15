@@ -1,4 +1,9 @@
-
+// Add gtag type declaration
+declare global {
+  interface Window {
+    gtag: (...args: any[]) => void;
+  }
+}
 
 export interface ChatAnalytics {
   query: string;
