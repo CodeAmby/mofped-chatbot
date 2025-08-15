@@ -59,6 +59,42 @@ A modern Retrieval-Augmented Generation (RAG) chatbot for the Ministry of Financ
 5. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
+## Deployment
+
+### Production Deployment
+
+The chatbot is currently deployed on Vercel and available at:
+**https://mofpedchatbot.vercel.app**
+
+### Environment Variables
+
+The following environment variables are configured in Vercel:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY`
+
+### Embedding the Widget
+
+To embed the chatbot on your website, add this script:
+
+```html
+<script src="https://mofpedchatbot.vercel.app/embed.js" async></script>
+```
+
+Or customize the widget:
+
+```html
+<script>
+  window.MoFPEDChatbot = {
+    apiUrl: 'https://mofpedchatbot.vercel.app/api/ask',
+    primaryColor: '#0B1F3B',
+    secondaryColor: '#1E40AF'
+  };
+</script>
+<script src="https://mofpedchatbot.vercel.app/embed.js" async></script>
+```
+
 ## Available Scripts
 
 - `npm run dev` - Start development server
@@ -108,23 +144,34 @@ The project uses a PostgreSQL database with the following key tables:
 ## Current Status
 
 ✅ **Completed:**
-- Modern chatbot UI with MoFPED branding
-- Supabase integration and connection testing
-- Simplified document discovery API
+- Modern chatbot UI with MoFPED branding and finance.go.ug homepage simulation
+- Supabase integration with all environment variables configured
+- Conversational RAG API with document discovery and external linking
 - Database schema optimized for metadata search
-- Sample data population framework
+- Sample data population with comprehensive MoFPED documents
+- Production deployment on Vercel
+- Embeddable widget for external websites
+- Analytics integration with Vercel Analytics
 
-🔄 **In Progress:**
-- Sample document population and testing
-- Semantic search optimization
-- Document categorization
+✅ **Live Demo:**
+- **Production URL**: https://mofpedchatbot.vercel.app
+- **API Endpoint**: https://mofpedchatbot.vercel.app/api/ask
+- **Widget Embed**: Available at `/embed.js`
+
+🔄 **Features Working:**
+- IFMS queries with external links to e-registration services
+- EGP queries with portal access
+- PBS and CFP system information
+- Contact information and support details
+- Conversational options and clickable responses
+- Real-time document search and discovery
 
 ⏳ **Next Steps:**
-- Populate with real MoFPED documents
+- Populate with additional real MoFPED documents
 - Implement advanced filtering by category/date
-- Add document analytics and usage tracking
-- Create embeddable widget
-- Deploy to production
+- Add comprehensive analytics dashboard
+- Custom domain setup (optional)
+- Performance optimization and caching
 
 ## Contributing
 
