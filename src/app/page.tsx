@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bot, Check, Copy, ExternalLink, Send, User, Minus } from "lucide-react";
+import { analyticsService } from "@/lib/analytics";
 
 type Sender = "user" | "bot";
 
@@ -26,6 +27,10 @@ export default function Home() {
 	const [copiedSource, setCopiedSource] = useState<string | null>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
+	// MoFPED brand colors
+	const primaryColor = "#103B73";
+	const secondaryColor = "#2E7D32";
+
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages, isOpen]);
@@ -36,6 +41,7 @@ export default function Home() {
 
 		// Check if this is an external link
 		if (textToSend.startsWith('http')) {
+			analyticsService.trackExternalLink(textToSend, 'external_link');
 			window.open(textToSend, '_blank');
 			return;
 		}
@@ -107,27 +113,148 @@ export default function Home() {
 	};
 
 	return (
-		<div className="min-h-screen">
+		<div className="min-h-screen bg-gray-50">
+			{/* Finance.go.ug Header */}
+			<header className="bg-white shadow-sm border-b">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+					<div className="flex justify-between items-center py-4">
+						<div className="flex items-center space-x-4">
+							<img src="/mofped-seal.svg" alt="MoFPED Seal" className="w-12 h-12" />
+							<div>
+								<h1 className="text-xl font-bold text-gray-900">Ministry of Finance, Planning and Economic Development</h1>
+								<p className="text-sm text-gray-600">The Republic of Uganda</p>
+							</div>
+						</div>
+						<nav className="hidden md:flex space-x-8">
+							<a href="#" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Home</a>
+							<a href="#" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">About</a>
+							<a href="#" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Services</a>
+							<a href="#" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Contact</a>
+						</nav>
+					</div>
+				</div>
+			</header>
+
+			{/* Main Content */}
+			<main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+				{/* Hero Section */}
+				<div className="bg-gradient-to-r from-blue-900 to-blue-700 rounded-lg shadow-lg p-8 mb-8">
+					<div className="text-center text-white">
+						<h2 className="text-3xl font-bold mb-4">Welcome to the Ministry of Finance, Planning and Economic Development</h2>
+						<p className="text-xl mb-6">Promoting sustainable economic growth and development for Uganda</p>
+						<div className="flex justify-center space-x-4">
+							<button className="bg-white text-blue-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+								Learn More
+							</button>
+							<button className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-900 transition-colors">
+								Our Services
+							</button>
+						</div>
+					</div>
+				</div>
+
+				{/* Quick Links Grid */}
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+					<div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+						<div className="text-blue-600 text-2xl mb-3">📊</div>
+						<h3 className="text-lg font-semibold mb-2">Budget & Planning</h3>
+						<p className="text-gray-600 text-sm">Access budget documents and planning information</p>
+					</div>
+					<div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+						<div className="text-green-600 text-2xl mb-3">💰</div>
+						<h3 className="text-lg font-semibold mb-2">Financial Management</h3>
+						<p className="text-gray-600 text-sm">Financial policies and management systems</p>
+					</div>
+					<div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+						<div className="text-purple-600 text-2xl mb-3">🏛️</div>
+						<h3 className="text-lg font-semibold mb-2">Economic Policy</h3>
+						<p className="text-gray-600 text-sm">Economic development policies and strategies</p>
+					</div>
+					<div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+						<div className="text-orange-600 text-2xl mb-3">📋</div>
+						<h3 className="text-lg font-semibold mb-2">Reports & Publications</h3>
+						<p className="text-gray-600 text-sm">Annual reports and official publications</p>
+					</div>
+				</div>
+
+				{/* News & Updates */}
+				<div className="bg-white rounded-lg shadow-md p-6">
+					<h3 className="text-xl font-semibold mb-4">Latest News & Updates</h3>
+					<div className="space-y-4">
+						<div className="border-l-4 border-blue-500 pl-4">
+							<h4 className="font-medium">2024/25 Budget Framework Paper Released</h4>
+							<p className="text-sm text-gray-600">The Ministry has released the Budget Framework Paper for the financial year 2024/25...</p>
+							<span className="text-xs text-gray-500">December 15, 2024</span>
+						</div>
+						<div className="border-l-4 border-green-500 pl-4">
+							<h4 className="font-medium">Economic Growth Projections Updated</h4>
+							<p className="text-sm text-gray-600">Updated economic growth projections for the current fiscal year have been published...</p>
+							<span className="text-xs text-gray-500">December 12, 2024</span>
+						</div>
+						<div className="border-l-4 border-purple-500 pl-4">
+							<h4 className="font-medium">New Financial Management Guidelines</h4>
+							<p className="text-sm text-gray-600">Updated guidelines for financial management in government institutions...</p>
+							<span className="text-xs text-gray-500">December 10, 2024</span>
+						</div>
+					</div>
+				</div>
+			</main>
+
+			{/* Footer */}
+			<footer className="bg-gray-800 text-white mt-12">
+				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+						<div>
+							<h4 className="text-lg font-semibold mb-4">Contact Information</h4>
+							<p className="text-sm text-gray-300">Plot 2-12 Apollo Kaggwa Road</p>
+							<p className="text-sm text-gray-300">P.O. Box 8147, Kampala, Uganda</p>
+							<p className="text-sm text-gray-300">Tel: +256 414 707000</p>
+						</div>
+						<div>
+							<h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+							<ul className="space-y-2 text-sm text-gray-300">
+								<li><a href="#" className="hover:text-white">Budget Documents</a></li>
+								<li><a href="#" className="hover:text-white">Economic Reports</a></li>
+								<li><a href="#" className="hover:text-white">Tenders</a></li>
+								<li><a href="#" className="hover:text-white">Careers</a></li>
+							</ul>
+						</div>
+						<div>
+							<h4 className="text-lg font-semibold mb-4">Connect With Us</h4>
+							<div className="flex space-x-4">
+								<a href="#" className="text-gray-300 hover:text-white">Twitter</a>
+								<a href="#" className="text-gray-300 hover:text-white">Facebook</a>
+								<a href="#" className="text-gray-300 hover:text-white">LinkedIn</a>
+							</div>
+						</div>
+					</div>
+					<div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-300">
+						<p>&copy; 2024 Ministry of Finance, Planning and Economic Development. All rights reserved.</p>
+					</div>
+				</div>
+			</footer>
+
+			{/* Chatbot Widget */}
 			{!isOpen && (
 				<button
-					aria-label="Open AI Assistant"
+					aria-label="Open MoFPED AI Assistant"
 					onClick={() => setIsOpen(true)}
-					className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full px-4 py-3 shadow-lg border bg-[#103B73] text-white hover:bg-[#0B1F3B] transition-colors"
+					className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full shadow-2xl border-2 border-white hover:scale-110 transition-all duration-200 flex items-center justify-center"
+					style={{ backgroundColor: primaryColor }}
 				>
-					<Bot className="w-5 h-5" />
-					<span className="text-sm font-medium">Ask MoFPED</span>
+					<img src="/mofped-seal.svg" alt="MoFPED Seal" className="w-8 h-8" />
 				</button>
 			)}
 
 			{isOpen && (
-				<div className="fixed bottom-4 right-4 z-50 w-[380px] h-[560px] bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col">
-					<div className="flex items-center justify-between px-4 py-3 rounded-t-2xl bg-[#103B73] text-white">
+				<div className="fixed bottom-6 right-6 z-50 w-[380px] h-[560px] bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col">
+					<div className="flex items-center justify-between px-4 py-3 rounded-t-2xl text-white" style={{ backgroundColor: primaryColor }}>
 						<div className="flex items-center gap-2">
 							<div className="p-2 bg-white rounded-lg">
 								<img src="/mofped-seal.svg" alt="MoFPED Seal" className="w-4 h-4" />
 							</div>
 							<div>
-								<h1 className="text-sm font-semibold leading-none">AI Assistant</h1>
+								<h1 className="text-sm font-semibold leading-none">MoFPED AI Assistant</h1>
 							</div>
 						</div>
 						<button aria-label="Minimize" onClick={() => setIsOpen(false)} className="p-1 rounded hover:bg-white/10">
@@ -139,12 +266,12 @@ export default function Home() {
 						{messages.map((message) => (
 							<div key={message.id} className={`flex gap-2 ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
 								{message.sender === "bot" && (
-									<div className="p-2 rounded-full" style={{ backgroundColor: "#103B73" }}>
+									<div className="p-2 rounded-full" style={{ backgroundColor: primaryColor }}>
 										<Bot className="w-4 h-4 text-white" />
 									</div>
 								)}
 
-								<div className={`max-w-[80%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${message.sender === "user" ? "text-white" : "text-[#0B1F3B] border border-gray-200"}`} style={{ backgroundColor: message.sender === "user" ? "#2E7D32" : "#ffffff" }}>
+								<div className={`max-w-[80%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${message.sender === "user" ? "text-white" : "text-[#0B1F3B] border border-gray-200"}`} style={{ backgroundColor: message.sender === "user" ? secondaryColor : "#ffffff" }}>
 									<p>{message.text}</p>
 
 									{message.sender === "bot" && message.options && message.options.length > 0 && (
@@ -154,10 +281,13 @@ export default function Home() {
 												{message.options.map((option, index) => (
 													<button
 														key={index}
-														onClick={() => handleSendMessage(option.query)}
+														onClick={() => {
+															analyticsService.trackOptionClick(option.text, message.text);
+															handleSendMessage(option.query);
+														}}
 														className="w-full text-left bg-blue-50 hover:bg-blue-100 rounded-lg p-2 border border-blue-200 transition-colors"
 													>
-														<p className="text-[11px] font-medium" style={{ color: "#103B73" }}>{option.text}</p>
+														<p className="text-[11px] font-medium" style={{ color: primaryColor }}>{option.text}</p>
 													</button>
 												))}
 											</div>
@@ -176,7 +306,7 @@ export default function Home() {
 												{message.sources.map((source, index) => (
 													<div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg p-2 border border-gray-200">
 														<div className="flex-1 min-w-0">
-															<p className="text-[11px] font-medium" style={{ color: "#103B73" }}>{source.title}</p>
+															<p className="text-[11px] font-medium" style={{ color: primaryColor }}>{source.title}</p>
 															{source.section && <p className="text-[11px] text-gray-500">{source.section}</p>}
 														</div>
 														<div className="flex items-center gap-1 ml-2">
@@ -193,19 +323,19 @@ export default function Home() {
 										</div>
 									)}
 
-								<p className="text-[10px] opacity-60 mt-2">{message.timestamp.toLocaleTimeString()}</p>
-							</div>
-
-							{message.sender === "user" && (
-								<div className="p-2 rounded-full" style={{ backgroundColor: "#2E7D32" }}>
-									<User className="w-4 h-4 text-white" />
+									<p className="text-[10px] opacity-60 mt-2">{message.timestamp.toLocaleTimeString()}</p>
 								</div>
-							)}
-						</div>
+
+								{message.sender === "user" && (
+									<div className="p-2 rounded-full" style={{ backgroundColor: secondaryColor }}>
+										<User className="w-4 h-4 text-white" />
+									</div>
+								)}
+							</div>
 						))}
 
 						{isLoading && (
-							<div className="flex items-center gap-3" style={{ color: "#103B73" }}>
+							<div className="flex items-center gap-3" style={{ color: primaryColor }}>
 								{/* "Shuffling documents" animation using simple bouncing blocks */}
 								<div className="w-4 h-4 bg-gray-300 rounded-sm animate-bounce" style={{ animationDelay: "0ms" }} />
 								<div className="w-4 h-3 bg-yellow-200 rounded-sm animate-bounce" style={{ animationDelay: "120ms" }} />
@@ -225,14 +355,15 @@ export default function Home() {
 								onChange={(e) => setInputValue(e.target.value)}
 								onKeyDown={handleKeyPress}
 								placeholder="Type your message here..."
-								className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-[13px] text-[#0B1F3B] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#103B73] focus:border-transparent"
+								className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-[13px] text-[#0B1F3B] placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent"
+								style={{ focusRingColor: primaryColor }}
 								disabled={isLoading}
 							/>
 							<button
-								onClick={handleSendMessage}
+								onClick={() => handleSendMessage()}
 								disabled={!inputValue.trim() || isLoading}
 								className="px-3 py-2 rounded-xl text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-								style={{ backgroundColor: "#2E7D32" }}
+								style={{ backgroundColor: secondaryColor }}
 								aria-label="Send message"
 							>
 								<Send className="w-4 h-4" />
