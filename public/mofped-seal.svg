@@ -1,19 +1,25 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Outer black ring -->
+  <!-- Outer black ring with round edges -->
   <circle cx="32" cy="32" r="32" fill="#000000"/>
   <circle cx="32" cy="32" r="30" fill="#D4AF37"/>
   
-  <!-- Ministry text on outer ring -->
-  <path d="M 32 8 A 24 24 0 0 1 56 32" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
-  <text x="32" y="12" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="6" font-weight="bold">
-    MINISTRY OF FINANCE, PLANNING AND ECONOMIC DEVELOPMENT
+  <!-- Ministry text on outer ring in arc -->
+  <defs>
+    <path id="textPath" d="M 8 32 A 24 24 0 0 1 56 32" fill="none"/>
+  </defs>
+  <text>
+    <textPath href="#textPath" startOffset="50%" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="4" font-weight="bold">
+      MINISTRY OF FINANCE, PLANNING AND ECONOMIC DEVELOPMENT
+    </textPath>
   </text>
   
-  <!-- Stars -->
-  <polygon points="20,10 22,14 26,14 23,17 25,21 20,19 15,21 17,17 14,14 18,14" fill="#FFFFFF"/>
-  <polygon points="44,10 46,14 50,14 47,17 49,21 44,19 39,21 41,17 38,14 42,14" fill="#FFFFFF"/>
+  <!-- Stars on either side -->
+  <polygon points="16,8 18,12 22,12 20,15 21,18 16,16 11,18 13,15 10,12 14,12" fill="#FFFFFF"/>
+  <polygon points="48,8 50,12 54,12 52,15 53,18 48,16 43,18 45,15 42,12 46,12" fill="#FFFFFF"/>
   
-  <!-- Central design - Ugandan Coat of Arms -->
+  <!-- Central golden/bronze gradient background -->
+  <circle cx="32" cy="32" r="25" fill="url(#goldGradient)"/>
+  
   <!-- Green mound base -->
   <ellipse cx="32" cy="45" rx="20" ry="6" fill="#228B22"/>
   
@@ -32,26 +38,26 @@
   <!-- Golden crest -->
   <ellipse cx="44" cy="30" rx="2" ry="1" fill="#FFD700"/>
   
-  <!-- Central shield -->
+  <!-- Central shield with white outline -->
   <rect x="28" y="28" width="8" height="10" fill="#000000" stroke="#FFFFFF" stroke-width="0.5"/>
-  <!-- Water lines -->
+  <!-- Water lines (Nile River) -->
   <rect x="29" y="29" width="6" height="1" fill="#0066CC"/>
   <rect x="29" y="31" width="6" height="1" fill="#0066CC"/>
   <rect x="29" y="33" width="6" height="1" fill="#0066CC"/>
-  <!-- Sun -->
+  <!-- Sun with radiating rays -->
   <circle cx="32" cy="35" r="1.5" fill="#FFD700"/>
-  <!-- Drum -->
+  <!-- Traditional Buganda drum -->
   <ellipse cx="32" cy="37" rx="2" ry="1" fill="#8B4513"/>
   <rect x="30" y="37" width="4" height="1" fill="#FFFFFF"/>
   
   <!-- Motto banner -->
   <rect x="20" y="48" width="24" height="3" fill="#FFFFFF"/>
-  <text x="32" y="50" text-anchor="middle" fill="#000000" font-family="Arial, sans-serif" font-size="4" font-weight="bold">
+  <text x="32" y="50" text-anchor="middle" fill="#000000" font-family="Arial, sans-serif" font-size="3" font-weight="bold">
     FOR GOD AND MY COUNTRY
   </text>
   
   <!-- Country name -->
-  <text x="32" y="56" text-anchor="middle" fill="#000000" font-family="Arial, sans-serif" font-size="3">
+  <text x="32" y="56" text-anchor="middle" fill="#000000" font-family="Arial, sans-serif" font-size="2.5">
     THE REPUBLIC OF UGANDA
   </text>
   
@@ -59,4 +65,13 @@
   <rect x="25" y="58" width="14" height="2" fill="#000000"/>
   <rect x="25" y="60" width="14" height="2" fill="#FFD700"/>
   <rect x="25" y="62" width="14" height="2" fill="#CC0000"/>
+  
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#D4AF37;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
 </svg>

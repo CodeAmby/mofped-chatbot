@@ -119,7 +119,7 @@ export default function Home() {
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex justify-between items-center py-4">
 						<div className="flex items-center space-x-4">
-							<img src="/mofped-seal.svg" alt="MoFPED Seal" className="w-12 h-12" />
+							<img src="/MOFPED-seal.png" alt="MoFPED Seal" className="w-12 h-12" />
 							<div>
 								<h1 className="text-xl font-bold text-gray-900">Ministry of Finance, Planning and Economic Development</h1>
 								<p className="text-sm text-gray-600">The Republic of Uganda</p>
@@ -239,10 +239,10 @@ export default function Home() {
 				<button
 					aria-label="Open MoFPED AI Assistant"
 					onClick={() => setIsOpen(true)}
-					className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full shadow-2xl border-2 border-white hover:scale-110 transition-all duration-200 flex items-center justify-center"
-					style={{ backgroundColor: primaryColor }}
+					className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-full px-6 py-4 shadow-lg hover:shadow-xl transition-all duration-200 bg-white border border-gray-200"
 				>
-					<img src="/mofped-seal.svg" alt="MoFPED Seal" className="w-8 h-8" />
+					<img src="/MOFPED-seal.png" alt="MoFPED Seal" className="w-10 h-10" />
+					<span className="text-black font-bold text-lg tracking-wide">ASK MOFPED</span>
 				</button>
 			)}
 
@@ -251,7 +251,7 @@ export default function Home() {
 					<div className="flex items-center justify-between px-4 py-3 rounded-t-2xl text-white" style={{ backgroundColor: primaryColor }}>
 						<div className="flex items-center gap-2">
 							<div className="p-2 bg-white rounded-lg">
-								<img src="/mofped-seal.svg" alt="MoFPED Seal" className="w-4 h-4" />
+								<img src="/MOFPED-seal.png" alt="MoFPED Seal" className="w-4 h-4" />
 							</div>
 							<div>
 								<h1 className="text-sm font-semibold leading-none">MoFPED AI Assistant</h1>
