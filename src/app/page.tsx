@@ -22,7 +22,7 @@ export default function Home() {
 	const [messages, setMessages] = useState<Message[]>([
 		{ 
 			id: "1", 
-			text: "Hello! I'm the MoFPED Help Assistant for Uganda's Ministry of Finance, Planning & Economic Development. I can help you with:\n\n📍 **Location & Directions** - Find office addresses and get directions\n📞 **Contact Information** - Phone numbers, emails, and support details\n🔧 **Service How-To** - Application processes and requirements\n📄 **Document Lookup** - Policies, forms, and official documents\n\nHow may I assist you today?", 
+			text: "Hello, I'm your MOFPED AI Assistant. How may I help you today?\n\n📍 Location & Directions\n📞 Contact Information\n🔧 Service How-To\n📄 Document Lookup\n\nAny other questions?", 
 			sender: "bot", 
 			timestamp: new Date() 
 		},
