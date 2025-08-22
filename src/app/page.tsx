@@ -15,11 +15,17 @@ interface Message {
 	confidence?: number;
 	notFound?: boolean;
 	options?: Array<{ text: string; action: string; query: string }>;
+	intent?: 'location' | 'document' | 'contact' | 'service';
 }
 
 export default function Home() {
 	const [messages, setMessages] = useState<Message[]>([
-		{ id: "1", text: "Hi, I'm your AI assistant! How may I assist you today?", sender: "bot", timestamp: new Date() },
+		{ 
+			id: "1", 
+			text: "Hello! I'm the MoFPED Help Assistant for Uganda's Ministry of Finance, Planning & Economic Development. I can help you with:\n\n📍 **Location & Directions** - Find office addresses and get directions\n📞 **Contact Information** - Phone numbers, emails, and support details\n🔧 **Service How-To** - Application processes and requirements\n📄 **Document Lookup** - Policies, forms, and official documents\n\nHow may I assist you today?", 
+			sender: "bot", 
+			timestamp: new Date() 
+		},
 	]);
 	const [inputValue, setInputValue] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
@@ -57,12 +63,14 @@ export default function Home() {
 		setIsLoading(true);
 
 		try {
+			console.log('[Frontend] Sending query:', textToSend);
 			const res = await fetch("/api/ask", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ query: textToSend }),
 			});
 			const data = await res.json();
+			console.log('[Frontend] Received response:', data);
 			const botMessage: Message = {
 				id: (Date.now() + 1).toString(),
 				text: data.summary ?? "Sorry, something went wrong.",
@@ -74,10 +82,12 @@ export default function Home() {
 					section: s.category,
 					relevance: 0.8
 				})) ?? [],
-				confidence: data.guardrail_status === "ok" ? 0.9 : 0.3,
+				confidence: data.confidence ?? (data.guardrail_status === "ok" ? 0.9 : 0.3),
 				notFound: data.guardrail_status === "not_found",
 				options: data.options ?? [],
+				intent: data.intent,
 			};
+			console.log('[Frontend] Created bot message with intent:', data.intent, 'and text:', data.summary?.substring(0, 100));
 			setMessages((prev) => [...prev, botMessage]);
 		} catch {
 			setMessages((prev) => [
@@ -110,6 +120,36 @@ export default function Home() {
 		if (c >= 0.6) return "High";
 		if (c >= 0.4) return "Medium";
 		return "Low";
+	};
+
+	const getIntentIcon = (intent?: string) => {
+		switch (intent) {
+			case 'location':
+				return '📍';
+			case 'contact':
+				return '📞';
+			case 'service':
+				return '🔧';
+			case 'document':
+				return '📄';
+			default:
+				return '🤖';
+		}
+	};
+
+	const getIntentLabel = (intent?: string) => {
+		switch (intent) {
+			case 'location':
+				return 'Location';
+			case 'contact':
+				return 'Contact';
+			case 'service':
+				return 'Service';
+			case 'document':
+				return 'Document';
+			default:
+				return 'General';
+		}
 	};
 
 	return (
@@ -254,7 +294,8 @@ export default function Home() {
 								<img src="/MOFPED-seal.png" alt="MoFPED Seal" className="w-4 h-4" />
 							</div>
 							<div>
-								<h1 className="text-sm font-semibold leading-none">MoFPED AI Assistant</h1>
+								<h1 className="text-sm font-semibold leading-none">MoFPED Help Assistant</h1>
+								<p className="text-xs opacity-80">Official AI Support</p>
 							</div>
 						</div>
 						<button aria-label="Minimize" onClick={() => setIsOpen(false)} className="p-1 rounded hover:bg-white/10">
@@ -272,6 +313,12 @@ export default function Home() {
 								)}
 
 								<div className={`max-w-[80%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${message.sender === "user" ? "text-white" : "text-[#0B1F3B] border border-gray-200"}`} style={{ backgroundColor: message.sender === "user" ? secondaryColor : "#ffffff" }}>
+									{message.sender === "bot" && message.intent && (
+										<div className="flex items-center gap-1 mb-2 text-[11px] text-gray-600">
+											<span>{getIntentIcon(message.intent)}</span>
+											<span className="font-medium">{getIntentLabel(message.intent)} Query</span>
+										</div>
+									)}
 									<p>{message.text}</p>
 
 									{message.sender === "bot" && message.options && message.options.length > 0 && (
@@ -340,7 +387,7 @@ export default function Home() {
 								<div className="w-4 h-4 bg-gray-300 rounded-sm animate-bounce" style={{ animationDelay: "0ms" }} />
 								<div className="w-4 h-3 bg-yellow-200 rounded-sm animate-bounce" style={{ animationDelay: "120ms" }} />
 								<div className="w-3 h-5 bg-white border border-gray-300 rounded-sm animate-bounce" style={{ animationDelay: "240ms" }} />
-								<span className="text-[12px] text-gray-600 ml-1">Searching official documents…</span>
+								<span className="text-[12px] text-gray-600 ml-1">Analyzing your query and searching official sources…</span>
 							</div>
 						)}
 
@@ -354,9 +401,8 @@ export default function Home() {
 								value={inputValue}
 								onChange={(e) => setInputValue(e.target.value)}
 								onKeyDown={handleKeyPress}
-								placeholder="Type your message here..."
-								className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-[13px] text-[#0B1F3B] placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent"
-								style={{ focusRingColor: primaryColor }}
+								placeholder="Ask about location, contacts, services, or documents..."
+								className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-[13px] text-[#0B1F3B] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
 								disabled={isLoading}
 							/>
 							<button

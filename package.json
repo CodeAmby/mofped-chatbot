@@ -19,7 +19,8 @@
     "migrate-schema": "node scripts/migrate-schema.mjs",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
-    "smoke": "node scripts/doc-smoke.mjs"
+    "smoke": "node scripts/doc-smoke.mjs",
+    "test-intent": "node scripts/test-intent-classifier.mjs"
   },
   "dependencies": {
     "@langchain/community": "^0.3.50",

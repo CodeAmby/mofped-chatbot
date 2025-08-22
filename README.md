@@ -4,6 +4,16 @@ A modern Retrieval-Augmented Generation (RAG) chatbot for the Ministry of Financ
 
 ## Features
 
+- **Intent-Based Routing**: Intelligent classification of user queries into four categories:
+  - 📍 **Location/Directions** - Office addresses and directions
+  - 📞 **Contact Information** - Phone numbers, emails, and support details
+  - 🔧 **Service How-To** - Application processes and requirements
+  - 📄 **Document Lookup** - Policies, forms, and official documents
+- **Source Priority System**: 
+  - Primary: Official finance.go.ug website
+  - Secondary: Government directories (gov.ug)
+  - Tertiary: Internal document database (RAG)
+- **Web Scraping**: Real-time information from official government websites
 - **Modern Chat Interface**: Responsive, MoFPED-branded chatbot widget
 - **Document Discovery**: Intelligent search and categorization of MoFPED documents
 - **Supabase Integration**: Vector search with pgvector for semantic matching
@@ -95,9 +105,34 @@ Or customize the widget:
 <script src="https://mofpedchatbot.vercel.app/embed.js" async></script>
 ```
 
+## Intent Routing System
+
+The MoFPED Help Assistant uses an intelligent intent classification system to route user queries to the most appropriate information source:
+
+### Location/Directions Queries
+- **Keywords**: "where is", "address", "location", "directions", "office", "premises"
+- **Response**: Official address from finance.go.ug, office hours, contact info, and Google Maps link
+- **Format**: Structured response with address, hours, phone/email, and directions link
+
+### Contact/Hotlines Queries  
+- **Keywords**: "phone", "email", "contact", "help desk", "support"
+- **Response**: Official contact information from finance.go.ug contact pages
+- **Format**: Department-specific contact details with phone numbers and email addresses
+
+### Service How-To Queries
+- **Keywords**: "how to", "apply", "requirements", "process", "procedure"
+- **Response**: Service information from official government service pages
+- **Fallback**: RAG search through internal service documents
+
+### Document/Policy Queries
+- **Keywords**: "download", "form", "circular", "policy", "document"
+- **Response**: RAG search through internal document database
+- **Format**: Document links with descriptions and categories
+
 ## Available Scripts
 
 - `npm run dev` - Start development server
+- `npm run test-intent` - Test the intent classification system
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
