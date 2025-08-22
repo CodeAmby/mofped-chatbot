@@ -232,12 +232,37 @@ async function handleServiceQuery(query: string): Promise<MoFPEDResponse> {
 async function handleDocumentQuery(query: string): Promise<MoFPEDResponse> {
   console.log('[MoFPED] Handling document query');
   
-  // Use RAG search for document/policy queries
+  // Check if this is a generic document lookup request
+  const isGenericRequest = query.toLowerCase().includes('download documents forms') || 
+                          query.toLowerCase().includes('document lookup') ||
+                          query.toLowerCase().includes('documents');
+  
+  if (isGenericRequest) {
+    return {
+      summary: "I'd be happy to help you find documents! What specific document are you looking for?\n\nFor example:\n• Budget Framework Paper\n• Application forms\n• Policy documents\n• Circulars\n• Reports\n\nJust tell me the name or type of document you need.",
+      sources: [{
+        title: "MoFPED Document Search",
+        url: "https://www.finance.go.ug",
+        category: "Document Search"
+      }],
+      guardrail_status: 'ok',
+      intent: 'document',
+      confidence: 0.9,
+      options: [
+        { text: "Budget Documents", action: "document", query: "budget framework paper" },
+        { text: "Application Forms", action: "document", query: "application forms" },
+        { text: "Policy Documents", action: "document", query: "policy documents" },
+        { text: "Circulars", action: "document", query: "circulars" }
+      ]
+    };
+  }
+  
+  // Use RAG search for specific document queries
   const documents = await searchDocuments(query, 5);
   
   if (documents.length === 0) {
     return {
-      summary: "I couldn't find the specific document you're looking for in our database. Please check the official website at https://www.finance.go.ug for the most current documents and policies.",
+      summary: `I couldn't find documents matching "${query}" in our database. Here are some suggestions:\n\n• Try a different search term\n• Check the official website at finance.go.ug\n• Browse our document categories below`,
       sources: [{
         title: "Ministry of Finance Official Website",
         url: "https://www.finance.go.ug",
@@ -245,7 +270,13 @@ async function handleDocumentQuery(query: string): Promise<MoFPEDResponse> {
       }],
       guardrail_status: 'not_found',
       intent: 'document',
-      confidence: 0.5
+      confidence: 0.5,
+      options: [
+        { text: "Budget Documents", action: "document", query: "budget framework paper" },
+        { text: "Application Forms", action: "document", query: "application forms" },
+        { text: "Policy Documents", action: "document", query: "policy documents" },
+        { text: "Circulars", action: "document", query: "circulars" }
+      ]
     };
   }
 
