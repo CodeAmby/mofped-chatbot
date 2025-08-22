@@ -22,9 +22,15 @@ export default function Home() {
 	const [messages, setMessages] = useState<Message[]>([
 		{ 
 			id: "1", 
-			text: "Hello, I'm your MOFPED AI Assistant. How may I help you today?\n\n📍 Location & Directions\n📞 Contact Information\n🔧 Service How-To\n📄 Document Lookup\n\nAny other questions?", 
+			text: "Hello, I'm your MOFPED AI Assistant. How may I help you today?\n\nAny other questions?", 
 			sender: "bot", 
-			timestamp: new Date() 
+			timestamp: new Date(),
+			options: [
+				{ text: "📍 Location & Directions", action: "location", query: "where is mofped located" },
+				{ text: "📞 Contact Information", action: "contact", query: "contact information phone email" },
+				{ text: "🔧 Service How-To", action: "service", query: "how to apply for services" },
+				{ text: "📄 Document Lookup", action: "document", query: "download documents forms" }
+			]
 		},
 	]);
 	const [inputValue, setInputValue] = useState("");
