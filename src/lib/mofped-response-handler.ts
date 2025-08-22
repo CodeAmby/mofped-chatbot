@@ -91,7 +91,6 @@ async function handleLocationQuery(query: string): Promise<MoFPEDResponse> {
     summary += `\n`;
   }
   
-  summary += `Get directions: [Open in Maps](${mapsLink})\n`;
   summary += `Last checked: ${locationInfo.lastChecked}`;
 
   return {
