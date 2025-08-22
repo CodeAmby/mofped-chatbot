@@ -78,21 +78,21 @@ async function handleLocationQuery(query: string): Promise<MoFPEDResponse> {
   const mapsLink = createMapsLink(locationInfo.address);
   
   let summary = `Here's the official physical address for the Ministry of Finance headquarters.\n\n`;
-  summary += `**Address (verbatim):** ${locationInfo.address}\n`;
+  summary += `Address: ${locationInfo.address}\n`;
   
   if (locationInfo.hours) {
-    summary += `**Hours:** ${locationInfo.hours}\n`;
+    summary += `Hours: ${locationInfo.hours}\n`;
   }
   
   if (locationInfo.phone || locationInfo.email) {
-    summary += `**Contact:** `;
+    summary += `Contact: `;
     if (locationInfo.phone) summary += `Phone: ${locationInfo.phone} `;
     if (locationInfo.email) summary += `Email: ${locationInfo.email}`;
     summary += `\n`;
   }
   
-  summary += `**Get directions:** [Open in Maps](${mapsLink})\n`;
-  summary += `**Last checked:** ${locationInfo.lastChecked}`;
+  summary += `Get directions: [Open in Maps](${mapsLink})\n`;
+  summary += `Last checked: ${locationInfo.lastChecked}`;
 
   return {
     summary,
@@ -134,7 +134,7 @@ async function handleContactQuery(query: string): Promise<MoFPEDResponse> {
   
   contacts.forEach((contact, index) => {
     if (contact.department) {
-      summary += `**${contact.department}**\n`;
+      summary += `${contact.department}\n`;
     }
     if (contact.phone) {
       summary += `Phone: ${contact.phone}\n`;
