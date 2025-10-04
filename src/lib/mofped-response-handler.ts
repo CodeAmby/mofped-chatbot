@@ -167,6 +167,31 @@ async function handleContactQuery(query: string): Promise<MoFPEDResponse> {
 async function handleServiceQuery(query: string): Promise<MoFPEDResponse> {
   console.log('[MoFPED] Handling service query');
   
+  // Check if this is a generic service request
+  const isGenericServiceRequest = query.toLowerCase().includes('how to apply for services') ||
+                                 query.toLowerCase().includes('apply for services') ||
+                                 query.toLowerCase().includes('services');
+  
+  if (isGenericServiceRequest) {
+    return {
+      summary: "I'd be happy to help you with MoFPED services! What specific service are you looking for?\n\nCommon services include:\n• Tax services and compliance\n• Budget and financial planning\n• Economic policy consultation\n• Procurement services\n• Investment facilitation\n\nPlease tell me which service you need help with, and I'll guide you through the application process.",
+      sources: [{
+        title: "MoFPED Services Guide",
+        url: "https://www.finance.go.ug/services",
+        category: "Service Information"
+      }],
+      guardrail_status: 'ok',
+      intent: 'service',
+      confidence: 0.9,
+      options: [
+        { text: "Tax Services", action: "service", query: "tax services application" },
+        { text: "Budget Planning", action: "service", query: "budget planning services" },
+        { text: "Procurement", action: "service", query: "procurement services" },
+        { text: "Investment", action: "service", query: "investment facilitation" }
+      ]
+    };
+  }
+  
   // First try to find information on official service pages
   const serviceUrls = [
     'https://www.finance.go.ug/services',
@@ -200,20 +225,20 @@ async function handleServiceQuery(query: string): Promise<MoFPEDResponse> {
   
   if (documents.length > 0) {
     const response = generateResponse(query, documents);
-      return {
-    ...response,
-    intent: 'service',
-    confidence: 0.7,
-    sources: response.sources.map(s => ({
-      title: s.title,
-      url: s.url,
-      category: s.category || undefined
-    }))
-  };
+    return {
+      ...response,
+      intent: 'service',
+      confidence: 0.7,
+      sources: response.sources.map(s => ({
+        title: s.title,
+        url: s.url,
+        category: s.category || undefined
+      }))
+    };
   }
 
   return {
-    summary: "I couldn't find specific information about this service on the official website. Please visit https://www.finance.go.ug/services or contact our support team for assistance.",
+    summary: "I couldn't find specific information about this service on the official website. Here are some suggestions:\n\n• Visit the official services page at finance.go.ug\n• Contact our support team for assistance\n• Browse our service categories below",
     sources: [{
       title: "Ministry of Finance Services",
       url: "https://www.finance.go.ug/services",
@@ -224,7 +249,9 @@ async function handleServiceQuery(query: string): Promise<MoFPEDResponse> {
     confidence: 0.6,
     options: [
       { text: "Browse Services", action: "external", query: "https://www.finance.go.ug/services" },
-      { text: "Contact Support", action: "contact", query: "service support contact" }
+      { text: "Contact Support", action: "contact", query: "service support contact" },
+      { text: "Tax Services", action: "service", query: "tax services application" },
+      { text: "Budget Planning", action: "service", query: "budget planning services" }
     ]
   };
 }
