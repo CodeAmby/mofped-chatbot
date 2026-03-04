@@ -1,213 +1,70 @@
-# MoFPED Chatbot Deployment Guide
+# MoFPED Chatbot – Deployment & Setup
 
-## 🚀 Free Production Deployment
+## Current Status
 
-### 1. Vercel Deployment (Recommended)
+- **Git**: Connected to `https://github.com/CodeAmby/mofped-chatbot.git` (pushed)
+- **Vercel**: Deployed to `mofped-projects/mofped-chatbot` (Production: Ready)
+- **Supabase**: Project "Mofped Chatbot" exists but is **paused** – unpause in dashboard to use
 
-#### Prerequisites
-- GitHub account
-- Vercel account (free tier)
-- Supabase account (free tier)
+**Production URL**: https://mofped-chatbot-mofped-projects.vercel.app (or check Vercel dashboard)
 
-#### Steps
+To enable auto-deploy on push: Vercel Dashboard → Settings → Git → Connect Repository → select `CodeAmby/mofped-chatbot`
 
-1. **Push to GitHub**
+---
+
+## What You Need to Provide
+
+### 1. OpenAI API Key (required for production chat)
+
+The app uses OpenAI for AI responses. Without it, users see "AI service is not configured."
+
+**Add to Vercel:**
+1. Go to [Vercel Dashboard](https://vercel.com/mofped-projects/mofped-chatbot) → **Settings** → **Environment Variables**
+2. Add:
+   - **Name**: `OPENAI_API_KEY`
+   - **Value**: `sk-...` (your OpenAI API key)
+   - **Environment**: Production, Preview, Development
+
+### 2. Supabase (optional – for better document search)
+
+If you want vector search over Supabase instead of only finance.go.ug fallback:
+
+1. **Unpause** project: [Supabase Dashboard](https://supabase.com/dashboard/project/wxrhkqtzfxtjjgbnqcml) → Settings → Unpause
+2. **Get credentials**: Project Settings → API (URL & anon key) and Database (connection string)
+3. **Link locally** (optional):
    ```bash
-   git remote add origin https://github.com/yourusername/mofped-chatbot.git
-   git push -u origin main
+   supabase link --project-ref wxrhkqtzfxtjjgbnqcml
    ```
+4. **Add to Vercel**:
+   - `NEXT_PUBLIC_SUPABASE_URL` = `https://wxrhkqtzfxtjjgbnqcml.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = (from Supabase dashboard)
+   - `DATABASE_URL` = (from Supabase dashboard, e.g. connection pooler URL)
 
-2. **Deploy to Vercel**
-   - Go to [vercel.com](https://vercel.com)
-   - Click "New Project"
-   - Import your GitHub repository
-   - Configure environment variables:
-     ```
-     NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-     NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-     SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-     OPENAI_API_KEY=your_openai_api_key
-     ```
-   - Deploy
+### 3. Redeploy after adding env vars
 
-3. **Get Production URL**
-   - Your chatbot will be available at: `https://mofped-chatbot.vercel.app`
+After adding `OPENAI_API_KEY` (and optional Supabase vars):
 
-### 2. Supabase Setup
-
-1. **Create Supabase Project**
-   - Go to [supabase.com](https://supabase.com)
-   - Create new project
-   - Note down URL and API keys
-
-2. **Run Database Migrations**
-   ```bash
-   npm run prisma:migrate
-   npm run prisma:generate
-   ```
-
-3. **Populate Data**
-   ```bash
-   npm run populate-comprehensive
-   ```
-
-## 🔧 Embedding on Main Website
-
-### Option 1: Simple Script Tag
-
-Add this to your main website's `<head>` section:
-
-```html
-<script src="https://mofped-chatbot.vercel.app/embed.js" async></script>
+```bash
+vercel --prod
 ```
 
-### Option 2: Custom Configuration
+Or push to `main` – Vercel auto-deploys from GitHub if connected.
 
-```html
-<script>
-  window.MoFPEDChatConfig = {
-    apiUrl: 'https://mofped-chatbot.vercel.app/api/ask',
-    position: 'bottom-right',
-    primaryColor: '#103B73',
-    secondaryColor: '#2E7D32'
-  };
-</script>
-<script src="https://mofped-chatbot.vercel.app/embed.js" async></script>
-```
+---
 
-### Option 3: React Component (if using React)
+## Local Development
 
-```jsx
-import ChatWidget from 'https://mofped-chatbot.vercel.app/components/ChatWidget';
+1. Copy `.env.example` to `.env.local`
+2. Add your keys (see `.env.example` for structure)
+3. For local AI: set `USE_LOCAL_AI=true` and run Ollama (see `LOCAL_AI_SETUP.md`)
 
-function App() {
-  return (
-    <div>
-      {/* Your existing content */}
-      <ChatWidget 
-        apiUrl="https://mofped-chatbot.vercel.app/api/ask"
-        position="bottom-right"
-        primaryColor="#103B73"
-        secondaryColor="#2E7D32"
-      />
-    </div>
-  );
-}
-```
+---
 
-## 📊 Analytics Setup
+## Commands
 
-### 1. Vercel Analytics (Automatic)
-- Analytics are automatically enabled with Vercel deployment
-- View at: `https://vercel.com/your-project/analytics`
-
-### 2. Google Analytics (Optional)
-Add to your main website:
-
-```html
-<!-- Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'GA_MEASUREMENT_ID');
-</script>
-```
-
-### 3. Analytics Dashboard
-Access the analytics dashboard at:
-`https://mofped-chatbot.vercel.app/analytics`
-
-## 🛡️ Security & Compliance
-
-### Security Features Implemented
-- ✅ Rate limiting (30 requests/minute per IP)
-- ✅ Input validation and sanitization
-- ✅ CORS protection
-- ✅ Security headers (CSP, XSS protection, etc.)
-- ✅ SQL injection prevention
-- ✅ XSS attack prevention
-
-### Compliance Features
-- ✅ Request logging for audit trails
-- ✅ Data retention policies
-- ✅ Privacy-compliant analytics
-- ✅ Secure data transmission (HTTPS)
-
-### Environment Variables Required
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# OpenAI
-OPENAI_API_KEY=your_openai_api_key
-
-# Optional: Google Analytics
-NEXT_PUBLIC_GA_ID=your_ga_id
-```
-
-## 📈 Monitoring & Optimization
-
-### 1. Performance Monitoring
-- Response times tracked automatically
-- Popular queries identified
-- User interaction patterns analyzed
-
-### 2. Usage Optimization
-- Monitor popular queries to improve responses
-- Track external link clicks to optimize navigation
-- Analyze document relevance scores
-
-### 3. Content Updates
-- Add new documents using the ingestion scripts
-- Update external system links as needed
-- Modify conversational flows based on user feedback
-
-## 🔄 Maintenance
-
-### Regular Tasks
-1. **Weekly**: Check analytics dashboard
-2. **Monthly**: Update document database
-3. **Quarterly**: Review and optimize responses
-4. **Annually**: Security audit and compliance review
-
-### Update Process
-1. Make changes locally
-2. Test thoroughly
-3. Push to GitHub
-4. Vercel automatically redeploys
-5. Test production deployment
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-1. **Widget not loading**
-   - Check CORS settings
-   - Verify API URL is correct
-   - Check browser console for errors
-
-2. **Slow responses**
-   - Check Supabase connection
-   - Verify OpenAI API key
-   - Monitor rate limits
-
-3. **Analytics not working**
-   - Check Vercel Analytics setup
-   - Verify Google Analytics ID
-   - Check browser console for errors
-
-### Support
-- Check Vercel logs: `vercel logs`
-- Monitor Supabase dashboard
-- Review browser developer tools
-
-## 📞 Contact
-
-For technical support or questions:
-- Email: [your-email@domain.com]
-- GitHub Issues: [repository-url]/issues
-- Documentation: [your-docs-url]
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server |
+| `vercel` | Deploy preview |
+| `vercel --prod` | Deploy production |
+| `supabase link` | Link to Supabase project (after unpause) |
