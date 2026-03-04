@@ -1,6 +1,6 @@
 import { classifyIntent, IntentType } from './intent-classifier';
 import { getMoFPEDLocation, getMoFPEDContacts, createMapsLink, scrapeFinanceGoUg, searchFinanceGoUg } from './web-scraper';
-import { searchDocuments, generateResponse } from './rag-simple';
+import { searchDocuments, generateResponse, type DocumentResult } from './rag-simple';
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { getLLM, hasAIConfigured } from "./get-llm";
 
@@ -24,19 +24,7 @@ export interface MoFPEDResponse {
 export async function handleMoFPEDQuery(query: string, context: string[] = []): Promise<MoFPEDResponse> {
   const trimmedQuery = query.trim().toLowerCase();
   if (isGreeting(trimmedQuery)) {
-    return {
-      summary: "Hello! How can I help you today?",
-      sources: [],
-      guardrail_status: 'ok',
-      intent: 'document',
-      confidence: 0.9,
-      options: [
-        { text: "Find a document", action: "document", query: "budget documents" },
-        { text: "Contact information", action: "contact", query: "contact phone email" },
-        { text: "Office location", action: "location", query: "where is ministry of finance located" },
-        { text: "Services", action: "service", query: "services" }
-      ]
-    };
+    return getNaturalGreetingResponse(trimmedQuery);
   }
 
   const contextualQuery = buildContextualQuery(query, context);
@@ -84,14 +72,54 @@ function isGreeting(query: string): boolean {
     'good morning',
     'good afternoon',
     'good evening',
-    'greetings'
+    'greetings',
+    'good day',
+    'how are you',
+    'how do you do'
   ];
 
   if (greetings.includes(query)) {
     return true;
   }
 
-  return greetings.some((greeting) => query.startsWith(greeting));
+  if (greetings.some((g) => query.startsWith(g))) return true;
+  if (/^(hi|hello|hey)[\s!.,?]*$/i.test(query)) return true;
+  return false;
+}
+
+function getNaturalGreetingResponse(query: string): MoFPEDResponse {
+  // Mirror the user's greeting naturally, then ask how we can help
+  let greeting: string;
+  if (query.includes('hey')) {
+    greeting = "Hey! How can I help you today?";
+  } else if (query.includes('hello')) {
+    greeting = "Hello! What can I do for you?";
+  } else if (query.includes('good morning')) {
+    greeting = "Good morning! How can I assist you?";
+  } else if (query.includes('good afternoon')) {
+    greeting = "Good afternoon! What can I help you with?";
+  } else if (query.includes('good evening')) {
+    greeting = "Good evening! How can I help?";
+  } else if (query.includes('how are you') || query.includes('how do you do')) {
+    greeting = "I'm doing well, thanks for asking! What can I help you with today?";
+  } else {
+    // For "hi", "greetings", "good day", etc.
+    greeting = "Hi there! What can I do for you?";
+  }
+
+  return {
+    summary: greeting,
+    sources: [],
+    guardrail_status: "ok",
+    intent: "document",
+    confidence: 0.9,
+    options: [
+      { text: "Find a document", action: "document", query: "budget speech 2024" },
+      { text: "Contact info", action: "contact", query: "contact phone email" },
+      { text: "Office location", action: "location", query: "where is ministry of finance located" },
+      { text: "Services", action: "service", query: "how to apply for services" }
+    ]
+  };
 }
 
 async function handleLocationQuery(query: string): Promise<MoFPEDResponse> {
@@ -400,6 +428,12 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
     }
   }
 
+  // Try to generate a direct answer from document content (instead of generic "Is this what you're looking for?")
+  const directAnswer = await tryDirectAnswerFromDocuments(query, documents);
+  if (directAnswer) {
+    return directAnswer;
+  }
+
   const response = generateResponse(query, documents);
   return {
     ...response,
@@ -409,6 +443,39 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
       title: s.title,
       url: s.url,
       category: s.category || undefined
+    }))
+  };
+}
+
+async function tryDirectAnswerFromDocuments(
+  query: string,
+  documents: DocumentResult[]
+): Promise<MoFPEDResponse | null> {
+  if (documents.length === 0 || !hasAIConfigured()) return null;
+
+  const topDoc = documents[0];
+  if (!topDoc?.url) return null;
+
+  const scraped = await scrapeFinanceGoUg(topDoc.url);
+  if (!scraped?.content || scraped.content.length < 100) return null;
+
+  const answer = await formatConversationalAnswer(query, scraped.content);
+  if (!answer || answer.toLowerCase().includes("couldn't find a direct answer")) return null;
+
+  return {
+    summary: answer,
+    sources: documents.slice(0, 3).map((doc) => ({
+      title: doc.title,
+      url: doc.url,
+      category: doc.category || "Official Document"
+    })),
+    guardrail_status: "ok",
+    intent: "document",
+    confidence: 0.8,
+    options: documents.slice(0, 3).map((doc) => ({
+      text: "Open full document",
+      action: "external",
+      query: doc.url
     }))
   };
 }

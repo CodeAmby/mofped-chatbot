@@ -22,6 +22,7 @@
 
 # debug
 npm-debug.log*
+debug-*.log
 yarn-debug.log*
 yarn-error.log*
 
@@ -31,6 +32,10 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# MCP config (contains access token - use .cursor/mcp.json.example as template)
+.cursor/mcp.json
+
 
 # typescript
 *.tsbuildinfo

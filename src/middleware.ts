@@ -69,11 +69,12 @@ const allowedOrigins = [
   'https://finance.go.ug',
   'https://www.finance.go.ug',
   'https://mofped-chatbot.vercel.app',
+  'https://mofped-chatbot-mofped-projects.vercel.app',
   'http://localhost:3000', // For development
 ];
 
 function isAllowedOrigin(origin: string): boolean {
-  return allowedOrigins.includes(origin) || origin.startsWith('https://mofped-chatbot');
+  return allowedOrigins.includes(origin) || origin.startsWith('https://mofped-chatbot') || origin.endsWith('.vercel.app');
 }
 
 export function middleware(request: NextRequest) {
@@ -103,7 +104,11 @@ export function middleware(request: NextRequest) {
     
     if (!checkRateLimit(ip)) {
       return new NextResponse(
-        JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+        JSON.stringify({
+          error: 'Rate limit exceeded. Please try again later.',
+          summary: 'Rate limit exceeded. Please try again in a minute.',
+          response: 'Rate limit exceeded. Please try again in a minute.',
+        }),
         { 
           status: 429, 
           headers: { 
@@ -111,23 +116,6 @@ export function middleware(request: NextRequest) {
             'Retry-After': '60'
           } 
         }
-      );
-    }
-  }
-
-  // Input validation for API routes
-  if (request.nextUrl.pathname === '/api/ask' && request.method === 'POST') {
-    try {
-      const body = request.body;
-      if (body) {
-        // Note: In a real implementation, you'd need to clone the request
-        // to read the body without consuming it
-        // For now, we'll validate in the route handler
-      }
-                  } catch {
-      return new NextResponse(
-        JSON.stringify({ error: 'Invalid request body' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
   }

@@ -22,14 +22,14 @@ export default function Home() {
 	const [messages, setMessages] = useState<Message[]>([
 		{ 
 			id: "1", 
-			text: "Hello, I'm your MOFPED AI Assistant. How may I help you today?\n\nAny other questions?", 
+			text: "Hi! How can I help you today?", 
 			sender: "bot", 
 			timestamp: new Date(),
 			options: [
 				{ text: "📍 Location & Directions", action: "location", query: "where is mofped located" },
 				{ text: "📞 Contact Information", action: "contact", query: "contact information phone email" },
 				{ text: "🔧 Service How-To", action: "service", query: "how to apply for services" },
-				{ text: "📄 Document Lookup", action: "document", query: "download documents forms" }
+				{ text: "📄 Budget speech or document", action: "document", query: "budget speech 2024" }
 			]
 		},
 	]);
@@ -96,11 +96,22 @@ export default function Home() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ message: textToSend, history: buildHistory(messages) }),
 			});
-			const data = await res.json();
-			console.log('[Frontend] Received response:', data);
+			let data: Record<string, unknown>;
+			try {
+				data = await res.json();
+			} catch {
+				const fallback = !res.ok ? `Request failed (${res.status})` : "Invalid response from server.";
+				setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), text: fallback, sender: "bot", timestamp: new Date() }]);
+				return;
+			}
+			console.log('[Frontend] Received response:', res.status, data);
+			const displayText = (data.response || data.summary || data.error || "Sorry, something went wrong.") as string;
+			if (displayText === "Sorry, something went wrong.") {
+				console.warn('[Frontend] No response/summary/error in API response. Full data:', JSON.stringify(data));
+			}
 			const botMessage: Message = {
 				id: (Date.now() + 1).toString(),
-				text: data.response ?? data.summary ?? "Sorry, something went wrong.",
+				text: displayText,
 				sender: "bot",
 				timestamp: new Date(),
 				sources: data.sources?.map((s: { url: string; title: string; section?: string; category?: string }) => ({

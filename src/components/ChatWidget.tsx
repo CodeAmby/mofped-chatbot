@@ -33,7 +33,7 @@ export default function ChatWidget({
 	secondaryColor = "#2E7D32"
 }: ChatWidgetProps) {
 	const [messages, setMessages] = useState<Message[]>([
-		{ id: "1", text: "Hi, I'm your MoFPED AI assistant! How may I assist you today?", sender: "bot", timestamp: new Date() },
+		{ id: "1", text: "Hi! How can I help you today?", sender: "bot", timestamp: new Date() },
 	]);
 	const [inputValue, setInputValue] = useState("");
 	const [pendingCount, setPendingCount] = useState(0);
@@ -139,13 +139,26 @@ export default function ChatWidget({
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ message: textToSend, history: buildHistory(messages) }),
 			});
-			const data = await res.json();
-			
+			let data: Record<string, unknown>;
+			try {
+				data = await res.json();
+			} catch {
+				const fallback = !res.ok ? `Request failed (${res.status}). Please check your connection.` : "Invalid response from server.";
+				setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), text: fallback, sender: "bot", timestamp: new Date() }]);
+				return;
+			}
+
 			const responseTime = Date.now() - startTime.current;
-			
+
+			// 400 from our API includes response/summary; show it or a clear message
+			const displayText = (data.response || data.summary || data.error || (res.status === 400 ? "Please enter a question or message." : "Sorry, something went wrong.")) as string;
+			if (displayText === "Sorry, something went wrong.") {
+				console.warn('[ChatWidget] No response/summary/error in API response. Full data:', JSON.stringify(data));
+			}
+
 			const botMessage: Message = {
 				id: (Date.now() + 1).toString(),
-				text: data.response ?? data.summary ?? "Sorry, something went wrong.",
+				text: displayText,
 				sender: "bot",
 				timestamp: new Date(),
 				sources: data.sources?.map((s: { url: string; title: string; section?: string; category?: string }) => ({

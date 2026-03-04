@@ -467,7 +467,7 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
     if (!matchesYear) {
       const broadenedQuery = query.replace(/\b(19|20)\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
       return {
-        summary: `I couldn't find results for ${queryYear}. Here are the closest matches. Is this what you’re looking for?`,
+        summary: `I couldn't find results for ${queryYear}. Here are the closest matches. Is this what you're looking for?`,
         sources,
         guardrail_status: "ok",
         options: [
@@ -478,10 +478,10 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
   }
 
   const topDoc = documents[0];
-  const briefSummary = (topDoc.excerpt || topDoc.description || '').trim();
+  const briefSummary = (topDoc.excerpt || topDoc.description || topDoc.title || "").trim();
   const summaryText = briefSummary
-    ? `Is this what you’re looking for?\n\nBrief summary: ${briefSummary.substring(0, 220)}${briefSummary.length > 220 ? '…' : ''}`
-    : "Is this what you’re looking for?";
+    ? `I found relevant documents. Here's what I have:\n\n**${topDoc.title}**\n${briefSummary.substring(0, 300)}${briefSummary.length > 300 ? "…" : ""}\n\nClick below to open the full document.`
+    : `I found **${topDoc.title}**. Open the link below to view the full document.`;
 
   return {
     summary: summaryText,

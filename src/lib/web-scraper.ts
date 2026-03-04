@@ -321,6 +321,18 @@ function buildSearchQueries(query: string): string[] {
     }
   }
 
+  if (base.includes('speech') || base.includes('budget speech')) {
+    queries.add('budget speech');
+    if (year) {
+      queries.add(`budget speech ${year}`);
+    }
+  }
+
+  if (base.includes('minister') || base.includes('finance minister')) {
+    queries.add('minister of finance');
+    queries.add('minister finance');
+  }
+
   return Array.from(queries).filter(Boolean);
 }
 

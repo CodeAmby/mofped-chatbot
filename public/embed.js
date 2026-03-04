@@ -3,7 +3,7 @@
   
   // Configuration
   const config = {
-    apiUrl: 'https://mofped-chatbot.vercel.app/api/ask',
+    apiUrl: 'https://mofped-chatbot-mofped-projects.vercel.app/api/ask',
     position: 'bottom-right',
     primaryColor: '#103B73',
     secondaryColor: '#2E7D32',
@@ -14,7 +14,7 @@
   function loadCSS() {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'https://mofped-chatbot.vercel.app/widget.css';
+    link.href = 'https://mofped-chatbot-mofped-projects.vercel.app/widget.css';
     link.type = 'text/css';
     document.head.appendChild(link);
   }
@@ -22,7 +22,7 @@
   // Load the widget
   function loadWidget() {
     const script = document.createElement('script');
-    script.src = 'https://mofped-chatbot.vercel.app/widget.js';
+    script.src = 'https://mofped-chatbot-mofped-projects.vercel.app/widget.js';
     script.async = true;
     script.onload = function() {
       if (window.MoFPEDChatWidget) {
