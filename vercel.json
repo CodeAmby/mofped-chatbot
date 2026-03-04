@@ -3,6 +3,9 @@
   "functions": {
     "src/app/api/ask/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/chat/route.ts": {
+      "maxDuration": 30
     }
   }
 }

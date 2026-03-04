@@ -19,7 +19,7 @@ export function classifyIntent(query: string): IntentClassification {
   
   // Document/Policy keywords
   const documentKeywords = [
-    'show', 'download', 'form', 'circular', 'policy', 'document', 'paper',
+    'show', 'download', 'form', 'circular', 'policy', 'document', 'documents', 'doc', 'docs', 'paper',
     'budget framework', 'nbfp', 'pfma', 'section', 'regulation', 'guideline',
     'manual', 'procedure', 'template', 'application form', 'report'
   ];
@@ -55,6 +55,22 @@ export function classifyIntent(query: string): IntentClassification {
   ).length;
   
   // Special cases and overrides
+  if (lowerQuery.includes('budget speech') || /\b(deliver|delivered|presented|read)\b/.test(lowerQuery)) {
+    return {
+      intent: 'document',
+      confidence: 0.9,
+      keywords: words.filter(word => documentKeywords.some(keyword => word.includes(keyword) || keyword.includes(word)))
+    };
+  }
+
+  if (/\bminister\b/.test(lowerQuery) || /\bminister of finance\b/.test(lowerQuery)) {
+    return {
+      intent: 'document',
+      confidence: 0.9,
+      keywords: words.filter(word => documentKeywords.some(keyword => word.includes(keyword) || keyword.includes(word)))
+    };
+  }
+
   if (lowerQuery.includes('where is') || (lowerQuery.includes('address') && !lowerQuery.includes('email'))) {
     return {
       intent: 'location',

@@ -1,11 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 import { OpenAIEmbeddings } from "@langchain/openai";
+import { searchFinanceGoUg } from './web-scraper';
+import { searchHybrid, selectTopWithThreshold } from './rag';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false } }
-);
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    console.warn(
+      "[supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    );
+    return null;
+  }
+
+  return createClient(url, anonKey, { auth: { persistSession: false } });
+}
 
 export interface DocumentResult {
   id: string;
@@ -26,11 +36,17 @@ export async function embedQuery(text: string): Promise<number[]> {
 
 export async function searchDocuments(query: string, limit = 5): Promise<DocumentResult[]> {
   try {
-    console.log(`[search] Query: "${query}"`);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      return await searchFinanceFallback(normalizeQuery(query), limit);
+    }
+
+    const normalizedQuery = normalizeQuery(query);
+    console.log(`[search] Query: "${query}" -> "${normalizedQuery}"`);
     
       // Since we don't have embeddings, focus on keyword search
   // Split query into words for better matching
-  const queryWords = query.toLowerCase().split(' ').filter(word => word.length > 2);
+  const queryWords = normalizedQuery.toLowerCase().split(' ').filter(word => word.length > 2);
   let keywordResults = null;
   let keywordError = null;
 
@@ -56,7 +72,7 @@ export async function searchDocuments(query: string, limit = 5): Promise<Documen
       .from('Document')
       .select('id, title, url, description, category, contentType, publishDate')
       .eq('isActive', true)
-      .or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
+      .or(`title.ilike.%${normalizedQuery}%,description.ilike.%${normalizedQuery}%,category.ilike.%${normalizedQuery}%`)
       .order('publishDate', { ascending: false })
       .limit(limit);
     
@@ -91,7 +107,7 @@ export async function searchDocuments(query: string, limit = 5): Promise<Documen
           publishDate
         )
       `)
-      .or(`excerpt.ilike.%${query}%,keywords.cs.{${query}}`)
+      .or(`excerpt.ilike.%${normalizedQuery}%,keywords.cs.{${normalizedQuery}}`)
       .order('relevance', { ascending: false })
       .limit(limit);
 
@@ -143,12 +159,105 @@ export async function searchDocuments(query: string, limit = 5): Promise<Documen
       .slice(0, limit);
 
     console.log(`[search] Final results: ${finalResults.length} documents`);
-    return finalResults;
+    if (finalResults.length > 0) {
+      return finalResults;
+    }
+
+    const semanticResults = await searchSemanticFallback(normalizeQuery(query), limit);
+    if (semanticResults.length > 0) {
+      return semanticResults;
+    }
+
+    return await searchFinanceFallback(normalizeQuery(query), limit);
 
   } catch (error) {
     console.error('Search error:', error);
+    const semanticResults = await searchSemanticFallback(normalizeQuery(query), limit);
+    if (semanticResults.length > 0) {
+      return semanticResults;
+    }
+    return await searchFinanceFallback(normalizeQuery(query), limit);
+  }
+}
+
+async function searchFinanceFallback(query: string, limit: number): Promise<DocumentResult[]> {
+  const results = await searchFinanceGoUg(query, limit);
+  if (results.length === 0) {
     return [];
   }
+
+  return results.map((result) => ({
+    id: result.url,
+    title: result.title,
+    url: result.url,
+    description: result.snippet || null,
+    category: "Official Website Search",
+    contentType: "web",
+    publishDate: null,
+    relevance: 0.4,
+    excerpt: result.snippet || null
+  }));
+}
+
+async function searchSemanticFallback(query: string, limit: number): Promise<DocumentResult[]> {
+  try {
+    const rows = await searchHybrid(query, limit * 3);
+    const top = selectTopWithThreshold(rows, limit);
+    if (top.length === 0) {
+      return [];
+    }
+
+    return top.map((row) => ({
+      id: row.documentId,
+      title: row.title || "Untitled Document",
+      url: row.url,
+      description: row.content.slice(0, 200),
+      category: row.section || "Document",
+      contentType: "document",
+      publishDate: null,
+      relevance: Math.max(0.1, 1 - row.score),
+      excerpt: row.content.slice(0, 240)
+    }));
+  } catch (error) {
+    console.error('Semantic search error:', error);
+    return [];
+  }
+}
+
+function normalizeQuery(query: string): string {
+  const cleaned = query
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const leadingPhrases = [
+    /^please\s+/,
+    /^please\s+give\s+me\s+/,
+    /^can\s+you\s+/,
+    /^could\s+you\s+/,
+    /^would\s+you\s+/,
+    /^i\s+need\s+/,
+    /^i\s+want\s+/,
+    /^i\s+would\s+like\s+/,
+    /^show\s+me\s+/,
+    /^give\s+me\s+/,
+    /^find\s+me\s+/
+  ];
+
+  let normalized = cleaned;
+  leadingPhrases.forEach((pattern) => {
+    normalized = normalized.replace(pattern, '');
+  });
+
+  normalized = normalized
+    .replace(/\bbudget\s+(docs|doc)\b/g, 'budget document')
+    .replace(/\b(docs|doc)\b/g, 'document')
+    .replace(/\b(please|me|the|a|an|for|to|of|about|from)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return normalized || cleaned;
 }
 
 export function generateResponse(query: string, documents: DocumentResult[]): {
@@ -159,6 +268,7 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
 } {
   // Check for specific query types
   const queryLower = query.toLowerCase();
+  const queryYear = extractYear(queryLower);
   const isContactQuery = queryLower.includes('contact') || queryLower.includes('phone') || queryLower.includes('email') || queryLower.includes('number') || queryLower.includes('support');
   const isIFMSQuery = queryLower.includes('ifms');
   const isEGPQuery = queryLower.includes('egp') || queryLower.includes('procurement');
@@ -341,37 +451,51 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
     };
   }
 
-  // Generate general summary with options
-  const categories = Object.keys(byCategory);
-  let summary = `I found ${documents.length} relevant document${documents.length > 1 ? 's' : ''} on finance.go.ug:`;
+  // Generate concise summary with optional year handling
+  const sources = documents.map(doc => ({
+    title: doc.title,
+    url: doc.url,
+    category: doc.category
+  }));
 
-  if (categories.length === 1) {
-    summary += `\n\nAll documents are in the "${categories[0]}" category.`;
-  } else {
-    summary += `\n\nDocuments are categorized as: ${categories.join(', ')}.`;
-  }
-
-  // Add specific document mentions for top results
-  const topDocs = documents.slice(0, 3);
-  if (topDocs.length > 0) {
-    summary += '\n\nKey documents include:';
-    topDocs.forEach((doc) => {
-      summary += `\n• ${doc.title}`;
-      if (doc.description) {
-        summary += ` - ${doc.description.substring(0, 100)}...`;
-      }
+  if (queryYear) {
+    const matchesYear = documents.some((doc) => {
+      const haystack = `${doc.title} ${doc.url}`.toLowerCase();
+      return haystack.includes(queryYear);
     });
+
+    if (!matchesYear) {
+      const broadenedQuery = query.replace(/\b(19|20)\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
+      return {
+        summary: `I couldn't find results for ${queryYear}. Here are the closest matches. Is this what you’re looking for?`,
+        sources,
+        guardrail_status: "ok",
+        options: [
+          { text: "Broaden search", action: "document", query: broadenedQuery || query }
+        ]
+      };
+    }
   }
 
-  summary += '\n\nClick on the links below to view the full documents.';
+  const topDoc = documents[0];
+  const briefSummary = (topDoc.excerpt || topDoc.description || '').trim();
+  const summaryText = briefSummary
+    ? `Is this what you’re looking for?\n\nBrief summary: ${briefSummary.substring(0, 220)}${briefSummary.length > 220 ? '…' : ''}`
+    : "Is this what you’re looking for?";
 
   return {
-    summary,
-    sources: documents.map(doc => ({
-      title: doc.title,
-      url: doc.url,
-      category: doc.category
-    })),
-    guardrail_status: "ok"
+    summary: summaryText,
+    sources,
+    guardrail_status: "ok",
+    options: documents.slice(0, 3).map((doc) => ({
+      text: "Open full document",
+      action: "external",
+      query: doc.url
+    }))
   };
+}
+
+function extractYear(query: string): string | null {
+  const match = query.match(/\b(19|20)\d{2}\b/);
+  return match ? match[0] : null;
 }

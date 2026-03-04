@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "ingest": "tsx scripts/ingest.ts",
@@ -35,7 +35,7 @@
     "dotenv": "^17.2.1",
     "langchain": "^0.3.30",
     "lucide-react": "0.468.0",
-    "next": "15.4.6",
+    "next": "15.4.10",
     "openai": "^5.12.2",
     "pdf-parse": "^1.1.1",
     "pg": "^8.16.3",
@@ -52,9 +52,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.4.6",
+    "eslint-config-next": "15.4.10",
     "tailwindcss": "^4",
     "tsx": "^4.19.0",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

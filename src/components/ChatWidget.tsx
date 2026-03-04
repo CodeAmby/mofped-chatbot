@@ -36,19 +36,72 @@ export default function ChatWidget({
 		{ id: "1", text: "Hi, I'm your MoFPED AI assistant! How may I assist you today?", sender: "bot", timestamp: new Date() },
 	]);
 	const [inputValue, setInputValue] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
+	const [pendingCount, setPendingCount] = useState(0);
 	const [isOpen, setIsOpen] = useState(false);
 	const [copiedSource, setCopiedSource] = useState<string | null>(null);
+	const [pendingConfirmation, setPendingConfirmation] = useState<{ messageId: string; broadenQuery?: string } | null>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const startTime = useRef<number>(0);
+	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages, isOpen]);
 
-	const handleSendMessage = async (messageText?: string) => {
+	useEffect(() => {
+		if (isOpen) {
+			inputRef.current?.focus();
+		}
+	}, [isOpen]);
+
+
+	const isLoading = pendingCount > 0;
+
+	const handleSendMessage = async (messageText?: string, options?: { bypassConfirmation?: boolean }) => {
 		const textToSend = messageText || inputValue;
-		if (!textToSend.trim() || isLoading) return;
+		if (!textToSend.trim()) return;
+
+		const cleanedText = textToSend.trim().toLowerCase();
+		const isAffirmative = isAffirmativeReply(cleanedText);
+		const isNegative = isNegativeReply(cleanedText);
+
+		if (!options?.bypassConfirmation && pendingConfirmation) {
+			if (isAffirmative) {
+				setPendingConfirmation(null);
+				setMessages((prev) => [
+					...prev,
+					{
+						id: (Date.now() + 1).toString(),
+						text: "Great — want me to refine the results or look for something else?",
+						sender: "bot",
+						timestamp: new Date()
+					}
+				]);
+				if (!messageText) setInputValue("");
+				return;
+			}
+
+			if (isNegative) {
+				const broadenQuery = pendingConfirmation.broadenQuery;
+				setPendingConfirmation(null);
+				if (broadenQuery) {
+					return handleSendMessage(broadenQuery, { bypassConfirmation: true });
+				}
+				setMessages((prev) => [
+					...prev,
+					{
+						id: (Date.now() + 1).toString(),
+						text: "Got it — what should I search for instead?",
+						sender: "bot",
+						timestamp: new Date()
+					}
+				]);
+				if (!messageText) setInputValue("");
+				return;
+			}
+
+			setPendingConfirmation(null);
+		}
 
 		// Check if this is an external link
 		if (textToSend.startsWith('http')) {
@@ -67,13 +120,24 @@ export default function ChatWidget({
 		};
 		setMessages((prev) => [...prev, userMessage]);
 		if (!messageText) setInputValue("");
-		setIsLoading(true);
+		setPendingCount((count) => count + 1);
 
 		try {
+			const buildHistory = (items: Message[]) => {
+				const history = items
+					.filter((item) => item.sender === "user" || item.sender === "bot")
+					.slice(-10)
+					.map((item) => ({
+						role: item.sender === "user" ? "user" : "assistant",
+						content: item.text
+					}));
+				return history;
+			};
+
 			const res = await fetch(apiUrl, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ query: textToSend }),
+				body: JSON.stringify({ message: textToSend, history: buildHistory(messages) }),
 			});
 			const data = await res.json();
 			
@@ -81,20 +145,35 @@ export default function ChatWidget({
 			
 			const botMessage: Message = {
 				id: (Date.now() + 1).toString(),
-				text: data.summary ?? "Sorry, something went wrong.",
+				text: data.response ?? data.summary ?? "Sorry, something went wrong.",
 				sender: "bot",
 				timestamp: new Date(),
-				sources: data.sources?.map((s: { url: string; title: string; category?: string }) => ({
+				sources: data.sources?.map((s: { url: string; title: string; section?: string; category?: string }) => ({
 					url: s.url,
 					title: s.title,
-					section: s.category,
+					section: s.section ?? s.category,
 					relevance: 0.8
 				})) ?? [],
-				confidence: data.guardrail_status === "ok" ? 0.9 : 0.3,
-				notFound: data.guardrail_status === "not_found",
+				confidence: data.confidence ?? (data.guardrail_status === "ok" ? 0.9 : 0.3),
+				notFound: data.notFound ?? data.guardrail_status === "not_found",
 				options: data.options ?? [],
 			};
 			setMessages((prev) => [...prev, botMessage]);
+			const needsConfirmation =
+				typeof data.summary === "string" &&
+				data.summary.toLowerCase().includes("is this what you’re looking for");
+			if (needsConfirmation) {
+				const broadenOption = (data.options ?? []).find(
+					(option: { text: string; action: string; query: string }) =>
+						option.text.toLowerCase().includes("broaden")
+				);
+				setPendingConfirmation({
+					messageId: botMessage.id,
+					broadenQuery: broadenOption?.query
+				});
+			} else {
+				setPendingConfirmation(null);
+			}
 
 			// Track analytics
 			analyticsService.trackQuery({
@@ -112,8 +191,24 @@ export default function ChatWidget({
 				{ id: (Date.now() + 1).toString(), text: "Sorry, I hit an error. Please try again.", sender: "bot", timestamp: new Date() },
 			]);
 		} finally {
-			setIsLoading(false);
+			setPendingCount((count) => Math.max(0, count - 1));
 		}
+	};
+
+	const isAffirmativeReply = (text: string) => {
+		return (
+			/^(yes|yeah|yep|correct|right|sure|ok|okay)\b/.test(text) ||
+			/\b(yes|yep|sure|ok|okay)\b/.test(text)
+		);
+	};
+
+	const isNegativeReply = (text: string) => {
+		return (
+			/^(no|nope|nah|incorrect|wrong)\b/.test(text) ||
+			/\b(not really|no|nope|nah|incorrect|wrong)\b/.test(text) ||
+			text.includes("any other") ||
+			text.includes("any others")
+		);
 	};
 
 	const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -271,15 +366,15 @@ export default function ChatWidget({
 								value={inputValue}
 								onChange={(e) => setInputValue(e.target.value)}
 								onKeyDown={handleKeyPress}
+								ref={inputRef}
 								placeholder="Type your message here..."
 								className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-[13px] text-[#0B1F3B] placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent"
 								style={{ focusRingColor: primaryColor }}
-								disabled={isLoading}
+								disabled={false}
 							/>
 							<button
 								onClick={handleSendMessage}
-								disabled={!inputValue.trim() || isLoading}
-								className="px-3 py-2 rounded-xl text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+								className="px-3 py-2 rounded-xl text-white transition-all duration-200"
 								style={{ backgroundColor: secondaryColor }}
 								aria-label="Send message"
 							>

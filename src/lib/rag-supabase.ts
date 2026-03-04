@@ -1,11 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 import { OpenAIEmbeddings } from "@langchain/openai";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { auth: { persistSession: false } }
-);
+function getSupabaseClient() {
+	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+	const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+	if (!url || !anonKey) {
+		console.warn(
+			"[supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY."
+		);
+		return null;
+	}
+
+	return createClient(url, anonKey, { auth: { persistSession: false } });
+}
 
 export interface RetrievedChunk {
 	chunkId: string;
@@ -24,6 +32,11 @@ export async function embedQuery(text: string): Promise<number[]> {
 
 export async function searchHybrid(query: string, limit = 20): Promise<RetrievedChunk[]> {
 	try {
+		const supabase = getSupabaseClient();
+		if (!supabase) {
+			return [];
+		}
+
 		console.log(`[search] Query: "${query}"`);
 		
 		// First, let's see what documents we have
