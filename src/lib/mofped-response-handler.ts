@@ -10,6 +10,7 @@ export interface MoFPEDResponse {
     title: string;
     url: string;
     category?: string;
+    description?: string;
   }>;
   guardrail_status: 'ok' | 'not_found' | 'error';
   options?: Array<{
@@ -114,10 +115,9 @@ function getNaturalGreetingResponse(query: string): MoFPEDResponse {
     intent: "document",
     confidence: 0.9,
     options: [
-      { text: "Find a document", action: "document", query: "budget speech 2024" },
-      { text: "Contact info", action: "contact", query: "contact phone email" },
-      { text: "Office location", action: "location", query: "where is ministry of finance located" },
-      { text: "Services", action: "service", query: "how to apply for services" }
+      { text: "Documents", action: "document", query: "documents" },
+      { text: "Office address", action: "location", query: "where is ministry of finance located" },
+      { text: "Contact", action: "contact", query: "contact" }
     ]
   };
 }
@@ -170,8 +170,7 @@ async function handleLocationQuery(query: string): Promise<MoFPEDResponse> {
     intent: 'location',
     confidence: 0.95,
     options: [
-      { text: "Get Directions", action: "external", query: mapsLink },
-      { text: "Contact Information", action: "contact", query: "contact phone email" }
+      { text: "Get directions", action: "external", query: mapsLink }
     ]
   };
 }
@@ -298,7 +297,8 @@ async function handleServiceQuery(query: string, searchQuery: string): Promise<M
       sources: response.sources.map(s => ({
         title: s.title,
         url: s.url,
-        category: s.category || undefined
+        category: s.category || undefined,
+        description: s.description
       }))
     };
   }
@@ -349,14 +349,23 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
     };
   }
 
-  // Check if this is a generic document lookup request
-  const isGenericRequest = query.toLowerCase().includes('download documents forms') || 
-                          query.toLowerCase().includes('document lookup') ||
-                          query.toLowerCase().includes('documents');
+  // "doc location" / "where are documents" = expand search to find documents
+  const isDocLocationQuery = /\b(doc|document|docs)\b.*\blocation\b/.test(query.toLowerCase()) ||
+    /\blocation\b.*\b(doc|document|docs)\b/.test(query.toLowerCase()) ||
+    (/\bwhere\b/.test(query.toLowerCase()) && /\b(doc|document|docs)\b/.test(query.toLowerCase()));
+  const effectiveSearchQuery = isDocLocationQuery ? "documents" : searchQuery;
+
+  // Check if this is a generic document lookup request (but not doc location - we search for that)
+  const qLower = query.toLowerCase();
+  const isGenericRequest = qLower.includes('download documents forms') || 
+                          qLower.includes('document lookup') ||
+                          qLower.includes('doc lookup') ||
+                          /\b(doc|document|docs)\s*lookup\b/.test(qLower) ||
+                          (qLower.includes('documents') && !isDocLocationQuery);
   
   if (isGenericRequest) {
     return {
-      summary: "I'd be happy to help you find documents! What specific document are you looking for?\n\nFor example:\n• Budget Framework Paper\n• Application forms\n• Policy documents\n• Circulars\n• Reports\n\nJust tell me the name or type of document you need.",
+      summary: "I can help you find documents. What are you looking for? For example: budget speech, application forms, circulars, or policy documents.",
       sources: [{
         title: "MoFPED Document Search",
         url: "https://www.finance.go.ug",
@@ -366,16 +375,14 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
       intent: 'document',
       confidence: 0.9,
       options: [
-        { text: "Budget Documents", action: "document", query: "budget framework paper" },
-        { text: "Application Forms", action: "document", query: "application forms" },
-        { text: "Policy Documents", action: "document", query: "policy documents" },
-        { text: "Circulars", action: "document", query: "circulars" }
+        { text: "Budget documents", action: "document", query: "budget documents" },
+        { text: "Forms & circulars", action: "document", query: "application forms circulars" }
       ]
     };
   }
   
   // Use RAG search for specific document queries
-  const documents = await searchDocuments(searchQuery, 5);
+  const documents = await searchDocuments(effectiveSearchQuery, 5);
   
   if (documents.length === 0) {
     const broadenQuery = query.replace(/\b(19|20)\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
@@ -398,10 +405,7 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
       intent: 'document',
       confidence: 0.4,
       options: [
-        { text: "Broaden search", action: "document", query: broadenQuery || query },
-        { text: "Budget documents", action: "document", query: "budget documents" },
-        { text: "Application forms", action: "document", query: "application forms" },
-        { text: "Policy documents", action: "document", query: "policy documents" }
+        { text: "Broaden search", action: "document", query: broadenQuery || query }
       ]
     };
   }
@@ -428,6 +432,23 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
     }
   }
 
+  // For budget documents: use generateResponse directly (brief summary + sources with descriptions).
+  // Skip tryDirectAnswerFromDocuments - it scrapes + LLM and produces long text with duplication.
+  if (isBudgetQuery) {
+    const response = generateResponse(query, documents);
+    return {
+      ...response,
+      intent: 'document',
+      confidence: 0.8,
+      sources: response.sources.map(s => ({
+        title: s.title,
+        url: s.url,
+        category: s.category || undefined,
+        description: s.description
+      }))
+    };
+  }
+
   // Try to generate a direct answer from document content (instead of generic "Is this what you're looking for?")
   const directAnswer = await tryDirectAnswerFromDocuments(query, documents);
   if (directAnswer) {
@@ -442,7 +463,8 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
     sources: response.sources.map(s => ({
       title: s.title,
       url: s.url,
-      category: s.category || undefined
+      category: s.category || undefined,
+      description: s.description
     }))
   };
 }
@@ -467,16 +489,12 @@ async function tryDirectAnswerFromDocuments(
     sources: documents.slice(0, 3).map((doc) => ({
       title: doc.title,
       url: doc.url,
-      category: doc.category || "Official Document"
+      category: doc.category || "Official Document",
+      description: (doc.excerpt || doc.description || "").substring(0, 150).trim() || undefined
     })),
     guardrail_status: "ok",
     intent: "document",
-    confidence: 0.8,
-    options: documents.slice(0, 3).map((doc) => ({
-      text: "Open full document",
-      action: "external",
-      query: doc.url
-    }))
+    confidence: 0.8
   };
 }
 
@@ -486,7 +504,7 @@ function buildContextualQuery(query: string, context: string[]): string {
     .filter((item) => item.length > 2)
     .filter((item) => !isGreeting(item.toLowerCase()))
     .filter((item) => !/^(yes|yeah|yep|ok|okay|no|nope|nah)\b/i.test(item))
-    .slice(-4);
+    .slice(-12); // Use last 12 exchanges for full session memory
 
   if (cleanedContext.length === 0) {
     return query;
@@ -549,7 +567,7 @@ function isMinisterQuery(query: string): boolean {
 async function answerWhQuestion(
   questionType: QuestionType,
   query: string,
-  documents: Array<{ title: string; url: string; category: string | null }>
+  documents: Array<{ title: string; url: string; category: string | null; excerpt?: string; description?: string }>
 ): Promise<MoFPEDResponse | null> {
   const candidate = documents[0];
   if (!candidate?.url) {
@@ -561,6 +579,7 @@ async function answerWhQuestion(
     return null;
   }
 
+  const desc = (candidate.excerpt || candidate.description || "").substring(0, 150).trim() || undefined;
   const extracted = extractAnswerFromContent(questionType, query, scraped.content);
   if (!extracted) {
     const clarification = await formatConversationalAnswer(query, scraped.content);
@@ -572,14 +591,12 @@ async function answerWhQuestion(
       sources: [{
         title: candidate.title,
         url: candidate.url,
-        category: candidate.category || "Official Document"
+        category: candidate.category || "Official Document",
+        description: desc
       }],
       guardrail_status: 'ok',
       intent: 'document',
-      confidence: 0.55,
-      options: [
-        { text: "Open full document", action: "external", query: candidate.url }
-      ]
+      confidence: 0.55
     };
   }
 
@@ -588,14 +605,12 @@ async function answerWhQuestion(
     sources: [{
       title: candidate.title,
       url: candidate.url,
-      category: candidate.category || "Official Document"
+      category: candidate.category || "Official Document",
+      description: desc
     }],
     guardrail_status: 'ok',
     intent: 'document',
-    confidence: 0.75,
-    options: [
-      { text: "Open full document", action: "external", query: candidate.url }
-    ]
+    confidence: 0.75
   };
 }
 
@@ -649,7 +664,8 @@ async function formatConversationalAnswer(question: string, content: string): Pr
       "system",
       "You are the MoFPED Help Assistant. Use the provided context to answer the user's question. " +
         "Be concise, conversational, and match synonyms (e.g., speech/document/report). " +
-        "If the context does not contain the answer, ask for clarification about the year or topic instead of saying you don't understand."
+        "If the context does not contain the answer, ask for clarification about the year or topic instead of saying you don't understand. " +
+        "Do NOT suggest 'Open full document' or 'What would you like to do?' — the UI shows source links separately."
     ],
     ["human", "Question: {question}\nContext: {context}"]
   ]);
@@ -696,14 +712,12 @@ async function answerMinisterQuery(query: string): Promise<MoFPEDResponse | null
     sources: [{
       title: candidate.title,
       url: candidate.url,
-      category: "Official Website"
+      category: "Official Website",
+      description: (candidate as { snippet?: string }).snippet?.substring(0, 150).trim() || undefined
     }],
     guardrail_status: 'ok',
     intent: 'document',
-    confidence: 0.85,
-    options: [
-      { text: "Open full document", action: "external", query: candidate.url }
-    ]
+    confidence: 0.85
   };
 }
 
@@ -740,16 +754,12 @@ async function answerBudgetSpeechSpeaker(query: string): Promise<MoFPEDResponse 
       sources: budgetResults.slice(0, 3).map((result) => ({
         title: result.title,
         url: result.url,
-        category: "Official Website"
+        category: "Official Website",
+        description: (result as { snippet?: string }).snippet?.substring(0, 150).trim() || undefined
       })),
       guardrail_status: 'not_found',
       intent: 'document',
-      confidence: 0.4,
-      options: budgetResults.slice(0, 3).map((result) => ({
-        text: "Open full document",
-        action: "external",
-        query: result.url
-      }))
+      confidence: 0.4
     };
   }
 
@@ -762,18 +772,16 @@ async function answerBudgetSpeechSpeaker(query: string): Promise<MoFPEDResponse 
   const speaker = extractSpeakerFromContent(scraped.content);
   if (!speaker) {
     return {
-      summary: "I found the budget speech page, but I couldn't confirm the speaker from the page content. Want to open the full document?",
+      summary: "I found the budget speech page, but I couldn't confirm the speaker from the page content.",
       sources: [{
         title: candidate.title,
         url: candidate.url,
-        category: "Official Website"
+        category: "Official Website",
+        description: (candidate as { snippet?: string }).snippet?.substring(0, 150).trim() || undefined
       }],
       guardrail_status: 'ok',
       intent: 'document',
-      confidence: 0.4,
-      options: [
-        { text: "Open full document", action: "external", query: candidate.url }
-      ]
+      confidence: 0.4
     };
   }
 
@@ -782,14 +790,12 @@ async function answerBudgetSpeechSpeaker(query: string): Promise<MoFPEDResponse 
     sources: [{
       title: candidate.title,
       url: candidate.url,
-      category: "Official Website"
+      category: "Official Website",
+      description: (candidate as { snippet?: string }).snippet?.substring(0, 150).trim() || undefined
     }],
     guardrail_status: 'ok',
     intent: 'document',
-    confidence: 0.85,
-    options: [
-      { text: "Open full document", action: "external", query: candidate.url }
-    ]
+    confidence: 0.85
   };
 }
 

@@ -262,7 +262,7 @@ function normalizeQuery(query: string): string {
 
 export function generateResponse(query: string, documents: DocumentResult[]): {
   summary: string;
-  sources: Array<{ title: string; url: string; category: string | null }>;
+  sources: Array<{ title: string; url: string; category: string | null; description?: string }>;
   guardrail_status: string;
   options?: Array<{ text: string; action: string; query: string }>;
 } {
@@ -335,23 +335,19 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
   if (isEGPQuery && !isContactQuery) {
     const egpSystem = documents.find(doc => doc.title.toLowerCase().includes('egp') && doc.category === 'External Systems');
     const egpContact = documents.find(doc => doc.title.toLowerCase().includes('egp') && doc.category === 'Contact Information');
-    const egpPolicy = documents.find(doc => doc.title.toLowerCase().includes('procurement') && doc.category === 'Policies');
     
     if (egpSystem) {
-      const options = [];
-      if (egpContact) options.push({ text: "Talk to someone", action: "contact", query: "EGP contact" });
-      if (egpPolicy) options.push({ text: "View procurement policy", action: "document", query: "procurement policy" });
-      options.push({ text: "Visit EGP portal", action: "external", query: "https://egpuganda.go.ug/" });
-      
+      const desc = (egpSystem.description || egpSystem.excerpt || "").substring(0, 150);
       return {
-        summary: `I found information about the **Electronic Government Procurement (EGP) Portal**. What would you like to know?\n\n• **Website**: Access the EGP portal for procurement processes\n• **Contact**: Get support contact information\n• **Policy**: View procurement guidelines and policies`,
-        sources: [{
-          title: egpSystem.title,
-          url: egpSystem.url,
-          category: egpSystem.category
-        }],
+        summary: desc
+          ? `The Electronic Government Procurement (EGP) Portal is for procurement processes. ${desc}…`
+          : "The EGP portal handles government procurement. You can access it for tenders and supplier registration.",
+        sources: [{ title: egpSystem.title, url: egpSystem.url, category: egpSystem.category }],
         guardrail_status: "ok",
-        options
+        options: [
+          { text: "Open EGP portal", action: "external", query: "https://egpuganda.go.ug/" },
+          ...(egpContact ? [{ text: "Contact support", action: "contact", query: "EGP contact" }] : [])
+        ]
       };
     }
   }
@@ -359,21 +355,23 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
   if (isBudgetQuery && !isContactQuery) {
     const budgetPortal = documents.find(doc => doc.title.toLowerCase().includes('budget portal') && doc.category === 'External Systems');
     const budgetDocs = documents.filter(doc => doc.category === 'Budget');
+    const budgetSources = budgetPortal ? [budgetPortal] : budgetDocs.slice(0, 3);
     
-    if (budgetPortal) {
-      const options = [];
-      if (budgetDocs.length > 0) options.push({ text: "View budget documents", action: "documents", query: "budget documents" });
-      options.push({ text: "Visit budget portal", action: "external", query: "budget portal" });
-      
+    if (budgetSources.length > 0) {
+      const top = budgetSources[0];
+      const desc = (top?.description || top?.excerpt || "").substring(0, 120);
       return {
-        summary: `I found information about **Budget** resources. What would you like to access?\n\n• **Budget Portal**: Comprehensive budget information and reports\n• **Budget Documents**: Official budget papers and speeches\n• **Budget Reports**: Implementation and execution reports`,
-        sources: [{
-          title: budgetPortal.title,
-          url: budgetPortal.url,
-          category: budgetPortal.category
-        }],
-        guardrail_status: "ok",
-        options
+        summary: desc
+          ? `Budget resources: ${desc}…`
+          : "I found budget documents — framework papers, speeches, and implementation reports.",
+        sources: budgetSources.map(doc => ({
+          title: doc.title,
+          url: doc.url,
+          category: doc.category,
+          description: (doc.excerpt || doc.description || "").substring(0, 150).trim() || undefined
+        })),
+        guardrail_status: "ok"
+        // No options - sources have the links; avoids duplication
       };
     }
   }
@@ -383,17 +381,11 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
     
     if (ifmsContact) {
       return {
-        summary: `I found information about the **Integrated Financial Management System (IFMS)**. What would you like to know?\n\n• **Contact Support**: Get technical support and access assistance\n• **System Information**: Learn about IFMS features and capabilities`,
-        sources: [{
-          title: ifmsContact.title,
-          url: ifmsContact.url,
-          category: ifmsContact.category
-        }],
+        summary: "IFMS is Uganda's Integrated Financial Management System for government accounting and reporting. For support: +256 414 230 000 or support@ifms.go.ug.",
+        sources: [{ title: ifmsContact.title, url: ifmsContact.url, category: ifmsContact.category }],
         guardrail_status: "ok",
         options: [
-          { text: "Contact IFMS support", action: "contact", query: "IFMS contact" },
-          { text: "Learn about IFMS", action: "info", query: "IFMS system" },
-          { text: "IFMS Registration/Access e-registration services", action: "external", query: "https://ereg.ifms.go.ug/menu.php?page=menu" }
+          { text: "e-Registration", action: "external", query: "https://ereg.ifms.go.ug/menu.php?page=menu" }
         ]
       };
     }
@@ -404,58 +396,38 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
     
     if (uraSystem) {
       return {
-        summary: `I found information about the **Uganda Revenue Authority (URA)**. What would you like to access?\n\n• **URA Website**: Tax information, customs, and revenue collection\n• **Tax Services**: Filing, payments, and compliance`,
-        sources: [{
-          title: uraSystem.title,
-          url: uraSystem.url,
-          category: uraSystem.category
-        }],
+        summary: "URA handles tax, customs, and revenue. Visit ura.go.ug for filing, payments, and compliance.",
+        sources: [{ title: uraSystem.title, url: uraSystem.url, category: uraSystem.category }],
         guardrail_status: "ok",
-        options: [
-          { text: "Visit URA website", action: "external", query: "URA website" },
-          { text: "Tax information", action: "info", query: "tax services" }
-        ]
+        options: [{ text: "Open URA website", action: "external", query: uraSystem.url }]
       };
     }
   }
 
   if (isPBSQuery && !isContactQuery) {
     return {
-      summary: `I found information about the **Programme Based System (PBS)**. What would you like to access?\n\n• **PBS Portal**: Programme-based budgeting and financial management\n• **System Access**: Login to PBS portal for authorized users`,
-      sources: [{
-        title: "Programme Based System (PBS)",
-        url: "https://pbsmof.finance.go.ug/auth/login",
-        category: "External Systems"
-      }],
+      summary: "PBS is the Programme Based System for budgeting and financial management. Authorized users can log in at pbsmof.finance.go.ug.",
+      sources: [{ title: "Programme Based System (PBS)", url: "https://pbsmof.finance.go.ug/auth/login", category: "External Systems" }],
       guardrail_status: "ok",
-      options: [
-        { text: "Access PBS Portal", action: "external", query: "https://pbsmof.finance.go.ug/auth/login" },
-        { text: "Learn about PBS", action: "info", query: "programme based system" }
-      ]
+      options: [{ text: "Open PBS portal", action: "external", query: "https://pbsmof.finance.go.ug/auth/login" }]
     };
   }
 
   if (isCFPQuery && !isContactQuery) {
     return {
-      summary: `I found information about the **Climate Finance Platform (CFP)**. What would you like to access?\n\n• **CFP Portal**: Climate finance tracking and management\n• **User Access**: Login to CFP portal for authorized users`,
-      sources: [{
-        title: "Climate Finance Platform (CFP)",
-        url: "https://climate.finance.go.ug/user/login",
-        category: "External Systems"
-      }],
+      summary: "The Climate Finance Platform tracks climate finance. Log in at climate.finance.go.ug for authorized users.",
+      sources: [{ title: "Climate Finance Platform (CFP)", url: "https://climate.finance.go.ug/user/login", category: "External Systems" }],
       guardrail_status: "ok",
-      options: [
-        { text: "Access CFP Portal", action: "external", query: "https://climate.finance.go.ug/user/login" },
-        { text: "Learn about CFP", action: "info", query: "climate finance platform" }
-      ]
+      options: [{ text: "Open CFP portal", action: "external", query: "https://climate.finance.go.ug/user/login" }]
     };
   }
 
-  // Generate concise summary with optional year handling
+  // Sources with description - no separate "Open document" buttons (avoids duplication)
   const sources = documents.map(doc => ({
     title: doc.title,
     url: doc.url,
-    category: doc.category
+    category: doc.category,
+    description: (doc.excerpt || doc.description || "").substring(0, 150).trim() || undefined
   }));
 
   if (queryYear) {
@@ -479,19 +451,16 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
 
   const topDoc = documents[0];
   const briefSummary = (topDoc.excerpt || topDoc.description || topDoc.title || "").trim();
-  const summaryText = briefSummary
-    ? `I found relevant documents. Here's what I have:\n\n**${topDoc.title}**\n${briefSummary.substring(0, 300)}${briefSummary.length > 300 ? "…" : ""}\n\nClick below to open the full document.`
-    : `I found **${topDoc.title}**. Open the link below to view the full document.`;
+  const docBrief = briefSummary ? briefSummary.substring(0, 180) + (briefSummary.length > 180 ? "…" : "") : null;
+  const summaryText = docBrief
+    ? `I found ${topDoc.title} — ${docBrief}`
+    : `I found ${topDoc.title}.`;
 
   return {
     summary: summaryText,
-    sources,
-    guardrail_status: "ok",
-    options: documents.slice(0, 3).map((doc) => ({
-      text: "Open full document",
-      action: "external",
-      query: doc.url
-    }))
+    sources: sources.slice(0, 3),
+    guardrail_status: "ok"
+    // No options - sources have the links; avoids "Open document" + links duplication
   };
 }
 

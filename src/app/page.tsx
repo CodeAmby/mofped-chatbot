@@ -11,7 +11,7 @@ interface Message {
 	text: string;
 	sender: Sender;
 	timestamp: Date;
-	sources?: Array<{ url: string; title: string; section?: string; relevance: number }>;
+	sources?: Array<{ url: string; title: string; section?: string; description?: string; relevance: number }>;
 	confidence?: number;
 	notFound?: boolean;
 	options?: Array<{ text: string; action: string; query: string }>;
@@ -19,6 +19,7 @@ interface Message {
 }
 
 export default function Home() {
+	const [pendingConfirmation, setPendingConfirmation] = useState<{ messageId: string; broadenQuery?: string } | null>(null);
 	const [messages, setMessages] = useState<Message[]>([
 		{ 
 			id: "1", 
@@ -57,9 +58,33 @@ export default function Home() {
 
 	const isLoading = pendingCount > 0;
 
-	const handleSendMessage = async (messageText?: string) => {
+	const handleSendMessage = async (messageText?: string, options?: { bypassConfirmation?: boolean }) => {
 		const textToSend = messageText || inputValue;
 		if (!textToSend.trim()) return;
+
+		const cleanedText = textToSend.trim().toLowerCase();
+		const isAffirmative = /^(yes|yeah|yep|correct|right|sure|ok|okay)\b/i.test(cleanedText);
+		const isNegative = /^(no|nope|nah|incorrect|wrong)\b/i.test(cleanedText);
+		const isBroadenRequest = /\b(broaden|broaden\s+search|expand\s+search|go\s+ahead|proceed|do\s+it|please\s+broaden|try\s+broader|search\s+broader)\b/i.test(cleanedText) ||
+			cleanedText === "broaden" || cleanedText.startsWith("broaden ");
+
+		// When bot asked for confirmation (e.g. "Want me to broaden?"): Yes / broaden / go ahead = proceed, No = ask what to search for
+		if (!options?.bypassConfirmation && pendingConfirmation) {
+			if ((isAffirmative || isBroadenRequest) && pendingConfirmation.broadenQuery) {
+				setPendingConfirmation(null);
+				return handleSendMessage(pendingConfirmation.broadenQuery, { bypassConfirmation: true });
+			}
+			if (isNegative) {
+				setPendingConfirmation(null);
+				setMessages((prev) => [
+					...prev,
+					{ id: (Date.now() + 1).toString(), text: "Got it — what would you like to search for instead?", sender: "bot", timestamp: new Date() },
+				]);
+				if (!messageText) setInputValue("");
+				return;
+			}
+			setPendingConfirmation(null);
+		}
 
 		// Check if this is an external link
 		if (textToSend.startsWith('http')) {
@@ -83,7 +108,7 @@ export default function Home() {
 			const buildHistory = (items: Message[]) => {
 				const history = items
 					.filter((item) => item.sender === "user" || item.sender === "bot")
-					.slice(-10)
+					.slice(-20)
 					.map((item) => ({
 						role: item.sender === "user" ? "user" : "assistant",
 						content: item.text
@@ -94,7 +119,11 @@ export default function Home() {
 			const res = await fetch("/api/ask", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ message: textToSend, history: buildHistory(messages) }),
+				body: JSON.stringify({
+					message: textToSend,
+					history: buildHistory(messages),
+					sessionId: analyticsService.getSessionId(),
+				}),
 			});
 			let data: Record<string, unknown>;
 			try {
@@ -109,24 +138,48 @@ export default function Home() {
 			if (displayText === "Sorry, something went wrong.") {
 				console.warn('[Frontend] No response/summary/error in API response. Full data:', JSON.stringify(data));
 			}
+			const sources = data.sources?.map((s: { url: string; title: string; section?: string; category?: string; description?: string }) => ({
+				url: s.url,
+				title: s.title,
+				section: s.section ?? s.category,
+				description: s.description,
+				relevance: 0.8
+			})) ?? [];
+			// Filter out options that duplicate source links (e.g. "Open full document" when sources already have the link)
+			const sourceUrls = new Set(sources.map((s: { url: string }) => s.url));
+			const options = (data.options ?? []).filter(
+				(o: { action?: string; query?: string }) =>
+					!(o.action === "external" && o.query && sourceUrls.has(o.query))
+			);
 			const botMessage: Message = {
 				id: (Date.now() + 1).toString(),
 				text: displayText,
 				sender: "bot",
 				timestamp: new Date(),
-				sources: data.sources?.map((s: { url: string; title: string; section?: string; category?: string }) => ({
-					url: s.url,
-					title: s.title,
-					section: s.section ?? s.category,
-					relevance: 0.8
-				})) ?? [],
+				sources,
 				confidence: data.confidence ?? (data.guardrail_status === "ok" ? 0.9 : 0.3),
 				notFound: data.notFound ?? data.guardrail_status === "not_found",
-				options: data.options ?? [],
+				options,
 				intent: data.intent,
 			};
 			console.log('[Frontend] Created bot message with intent:', data.intent, 'and text:', data.summary?.substring(0, 100));
 			setMessages((prev) => [...prev, botMessage]);
+
+			const summaryLower = (typeof data.summary === "string" ? data.summary : "").toLowerCase();
+			const needsConfirmation =
+				(summaryLower.includes("is this what") && summaryLower.includes("looking for")) ||
+				summaryLower.includes("want me to broaden");
+			if (needsConfirmation) {
+				const broadenOption = options.find(
+					(o: { text?: string }) => (o.text ?? "").toLowerCase().includes("broaden")
+				);
+				setPendingConfirmation({
+					messageId: botMessage.id,
+					broadenQuery: broadenOption?.query,
+				});
+			} else {
+				setPendingConfirmation(null);
+			}
 		} catch {
 			setMessages((prev) => [
 				...prev,
@@ -158,36 +211,6 @@ export default function Home() {
 		if (c >= 0.6) return "High";
 		if (c >= 0.4) return "Medium";
 		return "Low";
-	};
-
-	const getIntentIcon = (intent?: string) => {
-		switch (intent) {
-			case 'location':
-				return '📍';
-			case 'contact':
-				return '📞';
-			case 'service':
-				return '🔧';
-			case 'document':
-				return '📄';
-			default:
-				return '🤖';
-		}
-	};
-
-	const getIntentLabel = (intent?: string) => {
-		switch (intent) {
-			case 'location':
-				return 'Location';
-			case 'contact':
-				return 'Contact';
-			case 'service':
-				return 'Service';
-			case 'document':
-				return 'Document';
-			default:
-				return 'General';
-		}
 	};
 
 	return (
@@ -351,40 +374,32 @@ export default function Home() {
 								)}
 
 								<div className={`max-w-[80%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${message.sender === "user" ? "text-white" : "text-[#0B1F3B] border border-gray-200"}`} style={{ backgroundColor: message.sender === "user" ? secondaryColor : "#ffffff" }}>
-									{message.sender === "bot" && message.intent && (
-										<div className="flex items-center gap-1 mb-2 text-[11px] text-gray-600">
-											<span>{getIntentIcon(message.intent)}</span>
-											<span className="font-medium">{getIntentLabel(message.intent)} Query</span>
-										</div>
-									)}
 									<p>{message.text}</p>
 
 									{message.sender === "bot" && message.options && message.options.length > 0 && (
-										<div className="mt-3 pt-2 border-t border-gray-200">
-											<p className="text-[11px] text-gray-600 mb-2">What would you like to do?</p>
-											<div className="space-y-1.5">
-												{message.options.map((option, index) => (
-													<button
-														key={index}
-														onClick={() => {
-															analyticsService.trackOptionClick(option.text, message.text);
-															handleSendMessage(option.query);
-														}}
-														className="w-full text-left bg-blue-50 hover:bg-blue-100 rounded-lg p-2 border border-blue-200 transition-colors"
-													>
-														<p className="text-[11px] font-medium" style={{ color: primaryColor }}>{option.text}</p>
-													</button>
-												))}
-											</div>
+										<div className="mt-2 flex flex-wrap gap-1.5">
+											{message.options.map((option, index) => (
+												<button
+													key={index}
+													onClick={() => {
+														analyticsService.trackOptionClick(option.text, message.text);
+														handleSendMessage(option.query);
+													}}
+													className="text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-colors hover:opacity-90"
+													style={{ color: primaryColor, borderColor: primaryColor, backgroundColor: `${primaryColor}10` }}
+												>
+													{option.text}
+												</button>
+											))}
 										</div>
 									)}
 
 									{message.sender === "bot" && message.sources && message.sources.length > 0 && (
-										<div className="mt-3 pt-2 border-t border-gray-200">
+										<div className="mt-2 pt-2 border-t border-gray-100">
 											<div className="flex items-center justify-between mb-1">
-												<span className="text-[11px] text-gray-600">Sources ({message.sources.length})</span>
+												<span className="text-[10px] text-gray-500">Sources</span>
 												{formatConfidence(message.confidence) && (
-													<span className="text-[11px] text-gray-600">Confidence: {formatConfidence(message.confidence)}</span>
+													<span className="text-[10px] text-gray-500">{formatConfidence(message.confidence)}</span>
 												)}
 											</div>
 											<div className="space-y-1.5">
@@ -392,7 +407,8 @@ export default function Home() {
 													<div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg p-2 border border-gray-200">
 														<div className="flex-1 min-w-0">
 															<p className="text-[11px] font-medium" style={{ color: primaryColor }}>{source.title}</p>
-															{source.section && <p className="text-[11px] text-gray-500">{source.section}</p>}
+															{source.description && <p className="text-[10px] text-gray-600 mt-0.5 line-clamp-2">{source.description}</p>}
+															{source.section && <p className="text-[10px] text-gray-500 mt-0.5">{source.section}</p>}
 														</div>
 														<div className="flex items-center gap-1 ml-2">
 															<button onClick={() => copyToClipboard(source.url, source.url)} className="p-1 text-gray-500 hover:opacity-80" title="Copy URL">

@@ -71,6 +71,28 @@ export function classifyIntent(query: string): IntentClassification {
     };
   }
 
+  // "doc lookup" / "document lookup" = document search, not location
+  if (/\b(doc|document|docs)\s*lookup\b/.test(lowerQuery) || lowerQuery.includes('doc lookup') || lowerQuery.includes('document lookup')) {
+    return {
+      intent: 'document',
+      confidence: 0.95,
+      keywords: words.filter(word => documentKeywords.some(keyword => word.includes(keyword) || keyword.includes(word)))
+    };
+  }
+
+  // "doc location" / "document location" / "where are documents" = where to find documents, not physical address
+  if (
+    /\b(doc|document|docs)\b.*\blocation\b/.test(lowerQuery) ||
+    /\blocation\b.*\b(doc|document|docs)\b/.test(lowerQuery) ||
+    (/\bwhere\b/.test(lowerQuery) && /\b(doc|document|docs)\b/.test(lowerQuery))
+  ) {
+    return {
+      intent: 'document',
+      confidence: 0.9,
+      keywords: words.filter(word => documentKeywords.some(keyword => word.includes(keyword) || keyword.includes(word)))
+    };
+  }
+
   if (lowerQuery.includes('where is') || (lowerQuery.includes('address') && !lowerQuery.includes('email'))) {
     return {
       intent: 'location',
