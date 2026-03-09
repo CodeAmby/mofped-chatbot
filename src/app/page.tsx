@@ -30,7 +30,7 @@ export default function Home() {
 				{ text: "📍 Location & Directions", action: "location", query: "where is mofped located" },
 				{ text: "📞 Contact Information", action: "contact", query: "contact information phone email" },
 				{ text: "🔧 Service How-To", action: "service", query: "how to apply for services" },
-				{ text: "📄 Budget speech or document", action: "document", query: "budget speech 2024" }
+				{ text: "📄 Budget documents", action: "document", query: "budget documents" }
 			]
 		},
 	]);

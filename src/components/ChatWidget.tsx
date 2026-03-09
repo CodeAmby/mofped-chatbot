@@ -33,7 +33,18 @@ export default function ChatWidget({
 	secondaryColor = "#2E7D32"
 }: ChatWidgetProps) {
 	const [messages, setMessages] = useState<Message[]>([
-		{ id: "1", text: "Hi! How can I help you today?", sender: "bot", timestamp: new Date() },
+		{
+			id: "1",
+			text: "Hi! How can I help you today?",
+			sender: "bot",
+			timestamp: new Date(),
+			options: [
+				{ text: "📍 Location & Directions", action: "location", query: "where is mofped located" },
+				{ text: "📞 Contact Information", action: "contact", query: "contact information phone email" },
+				{ text: "🔧 Service How-To", action: "service", query: "how to apply for services" },
+				{ text: "📄 Budget documents", action: "document", query: "budget documents" }
+			]
+		}
 	]);
 	const [inputValue, setInputValue] = useState("");
 	const [pendingCount, setPendingCount] = useState(0);

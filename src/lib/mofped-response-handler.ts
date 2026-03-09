@@ -386,25 +386,26 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
   
   if (documents.length === 0) {
     const broadenQuery = query.replace(/\b(19|20)\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
-    const summary = queryYear
-      ? `I couldn't find results for ${queryYear}. Want me to broaden the search?`
-      : "I couldn't find results for that. Want me to broaden the search?";
+    const summary = isBudgetQuery
+      ? "Here are the official budget resources. You can browse budget speeches, framework papers, and fiscal documents by year."
+      : queryYear
+        ? `I couldn't find results for ${queryYear}. Want me to broaden the search?`
+        : "I couldn't find results for that. Want me to broaden the search?";
 
     return {
       summary,
-      sources: isBudgetQuery ? [{
-        title: "MoFPED Budget Publications",
-        url: "https://www.finance.go.ug/publications",
-        category: "Official Website"
-      }] : [{
+      sources: isBudgetQuery ? [
+        { title: "Uganda Budget Information", url: "https://budget.go.ug", category: "Budget", description: "Browse budget documents by fiscal year (FY 2009-10 to FY 2026-27)" },
+        { title: "MoFPED Budget Publications", url: "https://www.finance.go.ug/publications", category: "Budget", description: "Budget framework papers, speeches, and implementation reports" }
+      ] : [{
         title: "Ministry of Finance Official Website",
         url: "https://www.finance.go.ug",
         category: "Official Website"
       }],
-      guardrail_status: 'not_found',
+      guardrail_status: isBudgetQuery ? 'ok' : 'not_found',
       intent: 'document',
-      confidence: 0.4,
-      options: [
+      confidence: isBudgetQuery ? 0.85 : 0.4,
+      options: isBudgetQuery ? [] : [
         { text: "Broaden search", action: "document", query: broadenQuery || query }
       ]
     };

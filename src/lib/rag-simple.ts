@@ -355,7 +355,12 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
   if (isBudgetQuery && !isContactQuery) {
     const budgetPortal = documents.find(doc => doc.title.toLowerCase().includes('budget portal') && doc.category === 'External Systems');
     const budgetDocs = documents.filter(doc => doc.category === 'Budget');
-    const budgetSources = budgetPortal ? [budgetPortal] : budgetDocs.slice(0, 3);
+    // Also match docs with budget/speech in title (RAG may use different categories)
+    const budgetByTitle = documents.filter(doc => {
+      const t = (doc.title || "").toLowerCase();
+      return t.includes('budget') || t.includes('speech') || (doc.url || "").toLowerCase().includes('budget');
+    });
+    const budgetSources = budgetPortal ? [budgetPortal] : (budgetDocs.length > 0 ? budgetDocs : budgetByTitle).slice(0, 3);
     
     if (budgetSources.length > 0) {
       const top = budgetSources[0];
@@ -374,6 +379,15 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
         // No options - sources have the links; avoids duplication
       };
     }
+    // No matching docs from RAG — return guaranteed budget links so the option always works
+    return {
+      summary: "Here are the official budget resources. You can browse budget speeches, framework papers, and fiscal documents by year.",
+      sources: [
+        { title: "Uganda Budget Information", url: "https://budget.go.ug", category: "Budget", description: "Browse budget documents by fiscal year (FY 2009-10 to FY 2026-27)" },
+        { title: "MoFPED Budget Publications", url: "https://www.finance.go.ug/publications", category: "Budget", description: "Budget framework papers, speeches, and implementation reports" }
+      ],
+      guardrail_status: "ok"
+    };
   }
 
   if (isIFMSQuery && !isContactQuery) {
