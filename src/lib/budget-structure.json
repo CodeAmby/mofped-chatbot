@@ -1,0 +1,24 @@
+{
+  "dashboard": {
+    "url": "https://budget.finance.go.ug/dashboard",
+    "description": "Data, graphs, Excel downloads, approved budget comparisons"
+  },
+  "library": {
+    "url": "https://budget.finance.go.ug",
+    "description": "Budget Library - all documents by fiscal year"
+  },
+  "years": [
+    "FY 2026-27", "FY 2025-26", "FY 2024-25", "FY 2023-24", "FY 2022-23",
+    "FY 2021-22", "FY 2020-21", "FY 2019-20", "FY 2018-19", "FY 2017-18",
+    "FY 2016-17", "FY 2015-16", "FY 2014-15", "FY 2013-14", "FY 2012-13",
+    "FY 2011-12", "FY 2010-11", "FY 2009-10"
+  ],
+  "documentTypes": [
+    "Budget Speech",
+    "Budget Framework Paper",
+    "National Budget",
+    "Approved Budget Estimates",
+    "Budget Performance Report",
+    "Excel Downloads"
+  ]
+}

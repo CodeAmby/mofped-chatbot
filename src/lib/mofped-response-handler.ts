@@ -381,6 +381,30 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
     };
   }
   
+  // For generic "budget documents" (no year): always return all-years links so user can browse FY 2009–2027
+  const q = query.trim().toLowerCase().replace(/\s+/g, ' ');
+  const isGenericBudgetQuery = isBudgetQuery && !queryYear &&
+    (q === 'budget documents' || q === 'budget document' || q === 'budget speech' || q === 'budget docs' ||
+     q === 'budget speech or document' || /^budget\s+(documents?|speech|docs?)$/.test(q));
+  if (isGenericBudgetQuery) {
+    return {
+      summary: "Click the links below to go to the budget website. Or give me the name of the document you need and I'll try to retrieve it for you from the site.",
+      sources: [
+        { title: "Budget Dashboard — click here", url: "https://budget.finance.go.ug/dashboard", category: "Budget", description: "Data, graphs, Excel downloads (FY 2009-10 to FY 2026-27)" },
+        { title: "Budget Library — click here", url: "https://budget.finance.go.ug", category: "Budget", description: "Documents by fiscal year (FY 2009-10 to FY 2026-27)" },
+        { title: "MoFPED Publications — click here", url: "https://www.finance.go.ug/publications", category: "Budget", description: "Budget framework papers, speeches, and implementation reports" }
+      ],
+      guardrail_status: "ok",
+      intent: "document",
+      confidence: 0.9,
+      options: [
+        { text: "FY 2024-25", action: "document", query: "budget documents 2024" },
+        { text: "FY 2025-26", action: "document", query: "budget documents 2025" },
+        { text: "Budget framework paper", action: "document", query: "budget framework paper" }
+      ]
+    };
+  }
+
   // Use RAG search for specific document queries
   const documents = await searchDocuments(effectiveSearchQuery, 5);
   
@@ -393,10 +417,13 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
         : "I couldn't find results for that. Want me to broaden the search?";
 
     return {
-      summary,
+      summary: isBudgetQuery
+        ? "Click the links below to go to the budget website. Or give me the name of the document you need and I'll try to retrieve it for you."
+        : summary,
       sources: isBudgetQuery ? [
-        { title: "Uganda Budget Information", url: "https://budget.go.ug", category: "Budget", description: "Browse budget documents by fiscal year (FY 2009-10 to FY 2026-27)" },
-        { title: "MoFPED Budget Publications", url: "https://www.finance.go.ug/publications", category: "Budget", description: "Budget framework papers, speeches, and implementation reports" }
+        { title: "Budget Dashboard — click here", url: "https://budget.finance.go.ug/dashboard", category: "Budget", description: "Data, graphs, Excel downloads (FY 2009-10 to FY 2026-27)" },
+        { title: "Budget Library — click here", url: "https://budget.finance.go.ug", category: "Budget", description: "Documents by fiscal year (FY 2009-10 to FY 2026-27)" },
+        { title: "MoFPED Publications — click here", url: "https://www.finance.go.ug/publications", category: "Budget", description: "Budget framework papers, speeches, and implementation reports" }
       ] : [{
         title: "Ministry of Finance Official Website",
         url: "https://www.finance.go.ug",

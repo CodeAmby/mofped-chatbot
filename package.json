@@ -9,6 +9,8 @@
     "lint": "next lint",
     "ingest": "tsx scripts/ingest.ts",
     "ingest:supabase": "tsx scripts/ingest-supabase.ts",
+    "ingest:url": "tsx scripts/ingest-from-url.ts",
+    "fetch:budget-structure": "tsx scripts/fetch-budget-structure.ts",
     "test-doc": "tsx scripts/test-doc.ts",
     "check-db": "node scripts/check-db.mjs",
     "process-docs": "node scripts/process-existing-docs.mjs",

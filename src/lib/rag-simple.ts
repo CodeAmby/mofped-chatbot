@@ -364,27 +364,49 @@ export function generateResponse(query: string, documents: DocumentResult[]): {
     
     if (budgetSources.length > 0) {
       const top = budgetSources[0];
-      const desc = (top?.description || top?.excerpt || "").substring(0, 120);
-      return {
-        summary: desc
-          ? `Budget resources: ${desc}…`
-          : "I found budget documents — framework papers, speeches, and implementation reports.",
-        sources: budgetSources.map(doc => ({
+      const rawDesc = (top?.description || top?.excerpt || "").toLowerCase();
+      // Skip RAG excerpt if it looks like user comments (gratuity, pension, Permalink, Submitted by)
+      const isCommentLike = /\b(permalink|submitted by|comments?|gratuity|pension\s+arrears|not verified)\b/i.test(rawDesc);
+      const desc = isCommentLike ? "" : rawDesc.substring(0, 120);
+      const ragSources = budgetSources
+        .filter(doc => {
+          const d = (doc.excerpt || doc.description || "").toLowerCase();
+          return !/\b(permalink|submitted by|gratuity|pension\s+arrears)\b/i.test(d);
+        })
+        .slice(0, 2)
+        .map(doc => ({
           title: doc.title,
           url: doc.url,
           category: doc.category,
-          description: (doc.excerpt || doc.description || "").substring(0, 150).trim() || undefined
-        })),
+          description: (() => {
+            const d = (doc.excerpt || doc.description || "").trim();
+            if (/\b(permalink|submitted by|gratuity|pension)\b/i.test(d)) return undefined;
+            return d.substring(0, 150) || undefined;
+          })()
+        }));
+      // Prefer curated links — RAG often surfaces comment/forum content from budget.finance.go.ug
+      const curatedLinks = [
+        { title: "Budget Dashboard — click here", url: "https://budget.finance.go.ug/dashboard", category: "Budget" as string | null, description: "Data, graphs, Excel downloads (FY 2009-10 to FY 2026-27)" },
+        { title: "Budget Library — click here", url: "https://budget.finance.go.ug", category: "Budget" as string | null, description: "Documents by fiscal year" },
+        { title: "MoFPED Publications — click here", url: "https://www.finance.go.ug/publications", category: "Budget" as string | null, description: "Budget framework papers, speeches, and implementation reports" }
+      ];
+      const seenUrls = new Set(curatedLinks.map(s => s.url));
+      const fromRag = ragSources.filter(s => !seenUrls.has(s.url) && !s.url.includes("budget.finance.go.ug"));
+      return {
+        summary: desc
+          ? `Budget resources: ${desc}… Click the links below to go to the budget website. Or give me the document name and I'll try to retrieve it for you.`
+          : "Click the links below to go to the budget website. Or give me the name of the document you need and I'll try to retrieve it for you from the site.",
+        sources: [...curatedLinks, ...fromRag],
         guardrail_status: "ok"
-        // No options - sources have the links; avoids duplication
       };
     }
     // No matching docs from RAG — return guaranteed budget links so the option always works
     return {
-      summary: "Here are the official budget resources. You can browse budget speeches, framework papers, and fiscal documents by year.",
+      summary: "Click the links below to go to the budget website. Or give me the name of the document you need and I'll try to retrieve it for you from the site.",
       sources: [
-        { title: "Uganda Budget Information", url: "https://budget.go.ug", category: "Budget", description: "Browse budget documents by fiscal year (FY 2009-10 to FY 2026-27)" },
-        { title: "MoFPED Budget Publications", url: "https://www.finance.go.ug/publications", category: "Budget", description: "Budget framework papers, speeches, and implementation reports" }
+        { title: "Budget Dashboard — click here", url: "https://budget.finance.go.ug/dashboard", category: "Budget", description: "Data, graphs, Excel downloads (FY 2009-10 to FY 2026-27)" },
+        { title: "Budget Library — click here", url: "https://budget.finance.go.ug", category: "Budget", description: "Documents by fiscal year (FY 2009-10 to FY 2026-27)" },
+        { title: "MoFPED Publications — click here", url: "https://www.finance.go.ug/publications", category: "Budget", description: "Budget framework papers, speeches, and implementation reports" }
       ],
       guardrail_status: "ok"
     };
