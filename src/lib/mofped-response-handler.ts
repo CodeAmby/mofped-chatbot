@@ -381,12 +381,9 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
     };
   }
   
-  // For generic "budget documents" (no year): always return all-years links so user can browse FY 2009–2027
-  const q = query.trim().toLowerCase().replace(/\s+/g, ' ');
-  const isGenericBudgetQuery = isBudgetQuery && !queryYear &&
-    (q === 'budget documents' || q === 'budget document' || q === 'budget speech' || q === 'budget docs' ||
-     q === 'budget speech or document' || /^budget\s+(documents?|speech|docs?)$/.test(q));
-  if (isGenericBudgetQuery) {
+  // For ANY budget query: always return curated links. Never use RAG — budget.finance.go.ug has user comments
+  // (gratuity, pension, etc.) that get indexed and surface as wrong content.
+  if (isBudgetQuery) {
     return {
       summary: "Click the links below to go to the budget website. Or give me the name of the document you need and I'll try to retrieve it for you from the site.",
       sources: [
