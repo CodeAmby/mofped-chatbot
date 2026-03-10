@@ -28,6 +28,26 @@ export async function handleMoFPEDQuery(query: string, context: string[] = []): 
     return getNaturalGreetingResponse(trimmedQuery);
   }
 
+  const ifmsRegistrationRequest =
+    /\bifms\b/.test(trimmedQuery) &&
+    /\b(supplier|employee|registration|register)\b/.test(trimmedQuery);
+  if (ifmsRegistrationRequest) {
+    return {
+      summary: "I can open IFMS registration for you now.",
+      sources: [{
+        title: "IFMS Registration Portal",
+        url: "https://192.168.132.30/menu.php?page=menu",
+        category: "IFMS"
+      }],
+      guardrail_status: "ok",
+      intent: "service",
+      confidence: 0.95,
+      options: [
+        { text: "Open IFMS registration", action: "external", query: "https://192.168.132.30/menu.php?page=menu" }
+      ]
+    };
+  }
+
   const contextualQuery = buildContextualQuery(query, context);
   const intent = classifyIntent(contextualQuery);
   console.log(`[MoFPED] Intent classified as: ${intent.intent} (confidence: ${intent.confidence})`);
@@ -117,7 +137,8 @@ function getNaturalGreetingResponse(query: string): MoFPEDResponse {
     options: [
       { text: "Documents", action: "document", query: "documents" },
       { text: "Office address", action: "location", query: "where is ministry of finance located" },
-      { text: "Contact", action: "contact", query: "contact" }
+      { text: "Contact", action: "contact", query: "contact" },
+      { text: "Other (type your question)", action: "other", query: "__other__" }
     ]
   };
 }
@@ -365,7 +386,7 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
   
   if (isGenericRequest) {
     return {
-      summary: "I can help you find documents. What are you looking for? For example: budget speech, application forms, circulars, or policy documents.",
+      summary: "Which documents are you looking for? For budget data documents, click the Budget website link below, or tell me the exact document name and I will try to retrieve it.",
       sources: [{
         title: "MoFPED Document Search",
         url: "https://www.finance.go.ug",
@@ -375,8 +396,10 @@ async function handleDocumentQuery(query: string, searchQuery: string): Promise<
       intent: 'document',
       confidence: 0.9,
       options: [
-        { text: "Budget documents", action: "document", query: "budget documents" },
-        { text: "Forms & circulars", action: "document", query: "application forms circulars" }
+        { text: "Budget data documents", action: "external", query: "https://budget.finance.go.ug" },
+        { text: "Forms & circulars", action: "document", query: "application forms circulars" },
+        { text: "Policy documents", action: "document", query: "policy documents" },
+        { text: "Other (type your question)", action: "other", query: "__other__" }
       ]
     };
   }

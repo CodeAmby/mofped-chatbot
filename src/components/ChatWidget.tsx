@@ -42,7 +42,8 @@ export default function ChatWidget({
 				{ text: "📍 Location & Directions", action: "location", query: "where is mofped located" },
 				{ text: "📞 Contact Information", action: "contact", query: "contact information phone email" },
 				{ text: "🔧 Service How-To", action: "service", query: "how to apply for services" },
-				{ text: "📄 Budget documents", action: "document", query: "budget documents" }
+				{ text: "📄 Budget documents", action: "document", query: "budget documents" },
+				{ text: "✍️ Other (type your question)", action: "other", query: "__other__" }
 			]
 		}
 	]);
@@ -73,6 +74,9 @@ export default function ChatWidget({
 		if (!textToSend.trim()) return;
 
 		const cleanedText = textToSend.trim().toLowerCase();
+		const isIfmsRegistrationRequest =
+			/\bifms\b/.test(cleanedText) &&
+			/\b(supplier|employee|registration|register)\b/.test(cleanedText);
 		const isAffirmative = isAffirmativeReply(cleanedText);
 		const isNegative = isNegativeReply(cleanedText);
 		const isBroadenRequest = /\b(broaden|broaden\s+search|expand\s+search|go\s+ahead|proceed|do\s+it|please\s+broaden|try\s+broader|search\s+broader)\b/i.test(cleanedText) ||
@@ -100,6 +104,38 @@ export default function ChatWidget({
 				return;
 			}
 			setPendingConfirmation(null);
+		}
+
+		if (cleanedText === "__other__") {
+			setMessages((prev) => [
+				...prev,
+				{
+					id: (Date.now() + 1).toString(),
+					text: "Sure — type any question in the input box below and I’ll help.",
+					sender: "bot",
+					timestamp: new Date()
+				}
+			]);
+			if (!messageText) setInputValue("");
+			inputRef.current?.focus();
+			return;
+		}
+
+		if (isIfmsRegistrationRequest) {
+			const ifmsUrl = "https://192.168.132.30/menu.php?page=menu";
+			analyticsService.trackExternalLink(ifmsUrl, textToSend);
+			window.open(ifmsUrl, "_blank");
+			setMessages((prev) => [
+				...prev,
+				{
+					id: (Date.now() + 1).toString(),
+					text: "Opening IFMS supplier/employee registration now.",
+					sender: "bot",
+					timestamp: new Date()
+				}
+			]);
+			if (!messageText) setInputValue("");
+			return;
 		}
 
 		// Check if this is an external link
@@ -319,7 +355,11 @@ export default function ChatWidget({
 													key={index}
 													onClick={() => {
 														analyticsService.trackOptionClick(option.text, message.text);
-														handleSendMessage(option.query);
+														if (option.action === "other") {
+															handleSendMessage("__other__");
+														} else {
+															handleSendMessage(option.query);
+														}
 													}}
 													className="text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-colors hover:opacity-90"
 													style={{ color: primaryColor, borderColor: primaryColor, backgroundColor: `${primaryColor}10` }}
