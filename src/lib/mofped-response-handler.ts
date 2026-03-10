@@ -28,6 +28,12 @@ export async function handleMoFPEDQuery(query: string, context: string[] = []): 
     return getNaturalGreetingResponse(trimmedQuery);
   }
 
+  // Hard-route short document aliases to document intent.
+  // This avoids context contamination (e.g. previous location turns) for inputs like "docs".
+  if (/^(doc|docs|document|documents)$/.test(trimmedQuery) || /\b(doc|docs|document|documents)\s*lookup\b/.test(trimmedQuery)) {
+    return await handleDocumentQuery(query, query);
+  }
+
   const ifmsRegistrationRequest =
     /\bifms\b/.test(trimmedQuery) &&
     /\b(supplier|employee|registration|register)\b/.test(trimmedQuery);
@@ -547,6 +553,12 @@ async function tryDirectAnswerFromDocuments(
 }
 
 function buildContextualQuery(query: string, context: string[]): string {
+  const trimmedQuery = query.trim().toLowerCase();
+  // Do not enrich short document aliases with prior context.
+  if (/^(doc|docs|document|documents)$/.test(trimmedQuery) || /\b(doc|docs|document|documents)\s*lookup\b/.test(trimmedQuery)) {
+    return query;
+  }
+
   const cleanedContext = context
     .map((item) => item.trim())
     .filter((item) => item.length > 2)
