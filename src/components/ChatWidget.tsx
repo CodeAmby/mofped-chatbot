@@ -74,9 +74,6 @@ export default function ChatWidget({
 		if (!textToSend.trim()) return;
 
 		const cleanedText = textToSend.trim().toLowerCase();
-		const isIfmsRegistrationRequest =
-			/\bifms\b/.test(cleanedText) &&
-			/\b(supplier|employee|registration|register)\b/.test(cleanedText);
 		const isAffirmative = isAffirmativeReply(cleanedText);
 		const isNegative = isNegativeReply(cleanedText);
 		const isBroadenRequest = /\b(broaden|broaden\s+search|expand\s+search|go\s+ahead|proceed|do\s+it|please\s+broaden|try\s+broader|search\s+broader)\b/i.test(cleanedText) ||
@@ -118,23 +115,6 @@ export default function ChatWidget({
 			]);
 			if (!messageText) setInputValue("");
 			inputRef.current?.focus();
-			return;
-		}
-
-		if (isIfmsRegistrationRequest) {
-			const ifmsUrl = "https://192.168.132.30/menu.php?page=menu";
-			analyticsService.trackExternalLink(ifmsUrl, textToSend);
-			window.open(ifmsUrl, "_blank");
-			setMessages((prev) => [
-				...prev,
-				{
-					id: (Date.now() + 1).toString(),
-					text: "Opening IFMS supplier/employee registration now.",
-					sender: "bot",
-					timestamp: new Date()
-				}
-			]);
-			if (!messageText) setInputValue("");
 			return;
 		}
 
